@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+websockets
+numpy
+pydantic
+PyYAML
+pytest
+requests
+Pillow
+mss
+python-xlib
+sounddevice
+opencv-python
+fastcrc

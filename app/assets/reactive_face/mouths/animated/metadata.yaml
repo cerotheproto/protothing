@@ -1,0 +1,17 @@
+position:
+  x: 4
+  y: 16
+animated: false
+states:
+  default:
+    type: "sprite"
+    asset: "default.png"
+  viseme_a:
+    type: "sprite"
+    asset: "a.png"
+  viseme_e:
+    type: "sprite"
+    asset: "e.png"
+  viseme_o:
+    type: "sprite"
+    asset: "o.png"

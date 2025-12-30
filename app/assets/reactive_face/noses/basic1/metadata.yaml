@@ -1,0 +1,7 @@
+position:
+  x: 54
+  y: 2
+states:
+  default:
+    type: "sprite"
+    asset: "default.png"

@@ -1,0 +1,13 @@
+position:
+  x: 2
+  y: 2
+states:
+  open:
+    type: "sprite"
+    asset: "open.png"
+  closed:
+    type: "sprite"
+    asset: "closed.png"
+  blink:
+    type: "animated_sprite"
+    asset: "blink.gif"

@@ -1,0 +1,11 @@
+name: "basic1"
+components:
+  eye:
+    ref: "basic1"
+    state: "open"
+  nose:
+    ref: "basic1"
+    state: "default"
+  mouth:
+    ref: "animated"
+    state: "default"

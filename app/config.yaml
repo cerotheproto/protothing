@@ -1,0 +1,12 @@
+
+system:
+  startup_app: "reactive_face"
+  target_fps: 60
+  ws_enabled: true
+  
+
+reactive_face:
+  default_preset: "basic1"
+  
+led_strip:
+  led_number: 60
