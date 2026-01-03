@@ -50,16 +50,16 @@ async def list_files(path: str = ""):
     target_path = ASSETS_ROOT / path
     
     if not target_path.exists():
-        raise HTTPException(status_code=404, detail="Директория не найдена")
+        raise HTTPException(status_code=404, detail="Directory not found")
     
     if not target_path.is_dir():
-        raise HTTPException(status_code=400, detail="Путь не является директорией")
+        raise HTTPException(status_code=400, detail="Path is not a directory")
     
     # проверяем что путь внутри assets
     try:
         target_path.resolve().relative_to(ASSETS_ROOT.resolve())
     except ValueError:
-        raise HTTPException(status_code=403, detail="Доступ запрещен")
+        raise HTTPException(status_code=403, detail="Access denied")
     
     items = []
     for item in sorted(target_path.iterdir()):
@@ -83,16 +83,16 @@ async def download_file(path: str):
     target_path = ASSETS_ROOT / path
     
     if not target_path.exists():
-        raise HTTPException(status_code=404, detail="Файл не найден")
+        raise HTTPException(status_code=404, detail="File not found")
     
     if not target_path.is_file():
-        raise HTTPException(status_code=400, detail="Путь не является файлом")
+        raise HTTPException(status_code=400, detail="Path is not a file")
     
     # проверяем что путь внутри assets
     try:
         target_path.resolve().relative_to(ASSETS_ROOT.resolve())
     except ValueError:
-        raise HTTPException(status_code=403, detail="Доступ запрещен")
+        raise HTTPException(status_code=403, detail="Access denied")
     
     with open(target_path, "rb") as f:
         content = f.read()
@@ -122,7 +122,7 @@ async def upload_file(path: str, file: UploadFile = File(...)):
     try:
         target_path.resolve().parent.relative_to(ASSETS_ROOT.resolve())
     except ValueError:
-        raise HTTPException(status_code=403, detail="Доступ запрещен")
+        raise HTTPException(status_code=403, detail="Access denied")
     
     # создаем директорию если не существует
     target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -144,17 +144,17 @@ async def delete_file(path: str):
     target_path = ASSETS_ROOT / path
     
     if not target_path.exists():
-        raise HTTPException(status_code=404, detail="Файл не найден")
+        raise HTTPException(status_code=404, detail="File not found")
     
     # проверяем что путь внутри assets
     try:
         target_path.resolve().relative_to(ASSETS_ROOT.resolve())
     except ValueError:
-        raise HTTPException(status_code=403, detail="Доступ запрещен")
+        raise HTTPException(status_code=403, detail="Access denied")
     
     # не даем удалить корневую директорию assets
     if target_path.resolve() == ASSETS_ROOT.resolve():
-        raise HTTPException(status_code=403, detail="Нельзя удалить корневую директорию")
+        raise HTTPException(status_code=403, detail="Cannot delete root directory")
     
     if target_path.is_dir():
         shutil.rmtree(target_path)
@@ -173,10 +173,10 @@ async def create_directory(path: str, name: str):
     try:
         target_path.resolve().relative_to(ASSETS_ROOT.resolve())
     except ValueError:
-        raise HTTPException(status_code=403, detail="Доступ запрещен")
+        raise HTTPException(status_code=403, detail="Access denied")
     
     if target_path.exists():
-        raise HTTPException(status_code=400, detail="Директория уже существует")
+        raise HTTPException(status_code=400, detail="Directory already exists")
     
     target_path.mkdir(parents=True, exist_ok=True)
     
@@ -192,16 +192,16 @@ async def get_metadata(path: str):
     target_path = ASSETS_ROOT / path
     
     if not target_path.exists():
-        raise HTTPException(status_code=404, detail="Файл не найден")
+        raise HTTPException(status_code=404, detail="File not found")
     
     if target_path.suffix.lower() not in ['.yaml', '.yml']:
-        raise HTTPException(status_code=400, detail="Файл не является yaml")
+        raise HTTPException(status_code=400, detail="File is not YAML")
     
     # проверяем что путь внутри assets
     try:
         target_path.resolve().relative_to(ASSETS_ROOT.resolve())
     except ValueError:
-        raise HTTPException(status_code=403, detail="Доступ запрещен")
+        raise HTTPException(status_code=403, detail="Access denied")
     
     with open(target_path, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f)
@@ -215,16 +215,16 @@ async def update_metadata(path: str, data: dict):
     target_path = ASSETS_ROOT / path
     
     if not target_path.exists():
-        raise HTTPException(status_code=404, detail="Файл не найден")
+        raise HTTPException(status_code=404, detail="File not found")
     
     if target_path.suffix.lower() not in ['.yaml', '.yml']:
-        raise HTTPException(status_code=400, detail="Файл не является yaml")
+        raise HTTPException(status_code=400, detail="File is not YAML")
     
     # проверяем что путь внутри assets
     try:
         target_path.resolve().relative_to(ASSETS_ROOT.resolve())
     except ValueError:
-        raise HTTPException(status_code=403, detail="Доступ запрещен")
+        raise HTTPException(status_code=403, detail="Access denied")
     
     with open(target_path, 'w', encoding='utf-8') as f:
         yaml.dump(data, f, allow_unicode=True, sort_keys=False)

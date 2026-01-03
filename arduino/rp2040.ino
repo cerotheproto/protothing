@@ -184,19 +184,19 @@ void setup() {
     Ethernet.init(W5500_CS);
 
     if (!Ethernet.begin(mac, ip)) {
-        logPrintln("[ERROR] Не удалось получить IP для W5500");
-        // продолжим, но сообщим об ошибке
+        logPrintln("[ERROR] Failed to obtain IP for W5500");
+        // continue, but report the error
     }
     
     if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-        logPrintln("[ERROR] W5500 не найден!");
+        logPrintln("[ERROR] W5500 not found!");
         while (true) { delay(1); }
     }
 
     logPrintf("[ETH] IP: %s\n", Ethernet.localIP().toString().c_str());
 
     udp.begin(localPort);
-    logPrintf("[UDP] Порт: %d\n", localPort);
+    logPrintf("[UDP] Port: %d\n", localPort);
 
     // Инициализация DMD
     dmd.init();

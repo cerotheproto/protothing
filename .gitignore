@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 .github/
 .DS_Store
+app/logs/

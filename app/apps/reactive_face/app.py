@@ -9,7 +9,8 @@ import dependencies
 from .events import handle_events, get_events as imported_get_events, get_queries as imported_get_queries, handle_queries
 from utils.audio_processor import AudioProcessor
 import random
-
+import logging
+logger = logging.getLogger(__name__)
 class ReactiveFaceApp(BaseApp):
     def __init__(self):
         super().__init__()
@@ -67,7 +68,7 @@ class ReactiveFaceApp(BaseApp):
                 self.audio_processor.start()
                 self.audio_enabled = True
         except Exception as e:
-            print(f"Ошибка при инициализации аудио: {e}")
+            logger.error(f"Error initializing audio: {e}")
             self.audio_enabled = False
 
     def _load_preset(self, preset_name: str):
@@ -141,7 +142,7 @@ class ReactiveFaceApp(BaseApp):
                 to_state=to_state
             )
         except Exception as e:
-            print(f"Ошибка запуска перехода для {part_type}: {e}")
+            logger.error(f"Error starting transition for {part_type}: {e}")
 
     def reload_metadata(self):
         """Перезагружает метаданные частей лица"""

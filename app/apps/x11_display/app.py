@@ -10,6 +10,9 @@ from render.frame_description import FrameDescription
 from typing import Optional
 import time
 import os
+import logging
+
+logger = logging.getLogger(__name__) 
 
 class X11DisplayApp(BaseApp):
     name = "x11_display"
@@ -138,9 +141,9 @@ class X11DisplayApp(BaseApp):
                 cmd = [event.command] + event.args
                 try:
                     self.process = subprocess.Popen(cmd)
-                    print(f"Launched {self.command} with PID {self.process.pid}")
+                    logger.info(f"Launched {self.command} with PID {self.process.pid}")
                 except Exception as e:
-                    print(f"Failed to launch {self.command}: {e}")
+                    logger.error(f"Failed to launch {self.command}: {e}")
             
             elif isinstance(event, Close):
                 self._stop_process()
@@ -166,7 +169,7 @@ class X11DisplayApp(BaseApp):
             self.search_attempts += 1
             self.window_id = self._find_window_for_process()
             if self.window_id:
-                print(f"Found window: {self.window_id}")
+                logger.info(f"Found window: {self.window_id}")
                 coords = self._get_window_coords(self.window_id)
                 if coords:
                     self.geometry = coords

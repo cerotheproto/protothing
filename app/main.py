@@ -21,6 +21,7 @@ from time import time
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import logging
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ async def main_loop_task():
                 await asyncio.sleep(0)
     
         except Exception as e:
-            logger.error(f"Ошибка в главном цикле: {e}", exc_info=True)
+            logger.error(f"Error in main loop: {e}", exc_info=True)
             await asyncio.sleep(0.01)
 
 
@@ -105,7 +106,7 @@ async def lifespan(app: FastAPI):
     # ХАРДКОД: обработчик нажатия кнопки
     # Здесь указывается какой ивент будет вызываться при нажатии кнопки
     def handle_button_press(button_id: int):
-        logger.info(f"Обработка нажатия кнопки {button_id}")
+        logger.info(f"Processing button press {button_id}")
         # TODO: сделать нормальный выбор ивента через конфиг
         # Сейчас хардкодим вызов JumpEvent для dino_game
         from apps.dino_game.events import JumpEvent
@@ -167,4 +168,7 @@ for app_instance in app_manager.get_available_apps():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
+    os.makedirs("logs", exist_ok=True)
+    
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_config="log_conf.yaml")

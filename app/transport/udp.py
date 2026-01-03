@@ -11,9 +11,7 @@ logger = logging.getLogger(__name__)
 CMD_BRIGHTNESS = 0x01
 
 
-class UDPTransport(TransportBase):
-    """UDP транспорт для отправки кадров на W5500/RP2040"""
-    
+class UDPTransport(TransportBase):    
     def __init__(self, host: str = "192.168.1.100", port: int = 5555):
         """
         Инициализирует UDP транспорт
@@ -39,16 +37,16 @@ class UDPTransport(TransportBase):
                 lambda: protocol,
                 remote_addr=(self.host, self.port)
             )
-            logger.info(f"UDP транспорт запущен: {self.host}:{self.port}")
+            logger.info(f"UDP transport started: {self.host}:{self.port}")
         except Exception as e:
-            logger.error(f"Ошибка запуска UDP транспорта: {e}")
+            logger.error(f"Error starting UDP transport: {e}")
             raise
     
     async def stop(self) -> None:
         """Останавливает UDP транспорт"""
         if self._transport:
             self._transport.close()
-        logger.info("UDP транспорт остановлен")
+        logger.info("UDP transport stopped")
     
     def set_button_callback(self, callback: Callable[[int], None]) -> None:
         """Устанавливает коллбек для обработки нажатий кнопки"""
@@ -57,7 +55,7 @@ class UDPTransport(TransportBase):
     async def send_frame(self, frame_data: bytes) -> None:
         """Отправляет кадр 128x32 на устройство"""
         if not self._transport:
-            logger.warning("UDP транспорт не инициализирован")
+            logger.warning("UDP transport not initialized")
             return
         
         packet = Packet.make_frame(
@@ -72,13 +70,13 @@ class UDPTransport(TransportBase):
             data = packet.pack()
             self._transport.sendto(data)
         except Exception as e:
-            logger.error(f"Ошибка отправки кадра: {e}")
+            logger.error(f"Error sending frame: {e}")
     
 
     async def send_led_strip_frame(self, pixels: bytes) -> None:
         """Отправляет кадр для LED ленты на устройство"""
         if not self._transport:
-            logger.warning("UDP транспорт не инициализирован")
+            logger.warning("UDP transport is not initialized")
             return
         
         packet = Packet.make_led_strip_frame(
@@ -93,20 +91,20 @@ class UDPTransport(TransportBase):
             data = packet.pack()
             self._transport.sendto(data)
         except Exception as e:
-            logger.error(f"Ошибка отправки LED кадра: {e}")
+            logger.error(f"Error sending LED frame: {e}")
     
     async def is_connected(self) -> bool:
-        """Проверяет подключение (UDP не имеет состояния соединения, возвращает True если инициализирован)"""
+        """Checks connection (UDP has no connection state, returns True if initialized)"""
         return self._transport is not None
     
     def set_brightness(self, level: int) -> None:
-        """Устанавливает яркость дисплея"""
+        """Sets the display brightness level (0-255)"""
         if not self._transport:
-            logger.warning("UDP транспорт не инициализирован")
+            logger.warning("UDP transport is not initialized")
             return
         
         if level < 0 or level > 255:
-            logger.warning(f"Некорректный уровень яркости: {level}")
+            logger.warning(f"Invalid brightness level: {level}")
             return
         
         self._brightness = level
@@ -118,40 +116,40 @@ class UDPTransport(TransportBase):
             data = packet.pack()
             self._transport.sendto(data)
         except Exception as e:
-            logger.error(f"Ошибка отправки команды яркости: {e}")
+            logger.error(f"Error sending brightness command: {e}")
     
     def get_brightness(self) -> int:
-        """Возвращает текущий уровень яркости дисплея"""
+        """Returns the current display brightness level"""
         return self._brightness
 
 
 class _UDPProtocol(asyncio.DatagramProtocol):
-    """Внутренний протокол для обработки UDP пакетов"""
+    """Internal protocol for handling UDP packets"""
     
     def __init__(self, button_callback: Optional[Callable[[int], None]] = None):
         self.button_callback = button_callback
     
     def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
-        """Обрабатывает входящие UDP пакеты"""
+        """Handles incoming UDP packets"""
         try:
             packet = Packet.unpack(data)
-            logger.debug(f"UDP пакет от {addr}: {packet}")
+            logger.debug(f"UDP packet from {addr}: {packet}")
             
             if packet.ptype == TYPE_BUTTON:
                 payload = packet.parse_payload()
                 button_id = payload.get('button_id', 0)
-                logger.info(f"Получено нажатие кнопки: {button_id}")
+                logger.info(f"Received button press: {button_id}")
                 if self.button_callback:
                     self.button_callback(button_id)
                     
         except ValueError as e:
-            logger.warning(f"Ошибка парсинга UDP пакета: {e}")
+            logger.warning(f"Error parsing UDP packet: {e}")
     
     def error_received(self, exc: Exception) -> None:
-        """Обрабатывает ошибки UDP"""
-        logger.error(f"Ошибка UDP: {exc}")
+        """Handles UDP errors"""
+        logger.error(f"UDP error: {exc}")
     
     def connection_lost(self, exc: Optional[Exception]) -> None:
-        """Вызывается когда соединение потеряно"""
+        """Called when the connection is lost"""
         if exc:
-            logger.error(f"UDP соединение потеряно: {exc}")
+            logger.error(f"UDP connection lost: {exc}")

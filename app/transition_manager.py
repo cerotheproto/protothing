@@ -11,7 +11,8 @@ from utils.transition import (
 )
 from render.frame_description import SpriteLayer, AnimatedSpriteLayer
 import numpy as np
-
+import logging
+logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from apps.reactive_face.face_parts import PartState
 
@@ -155,7 +156,7 @@ class TransitionManager:
         progress.set_target(1.0)
         transition.progress = progress
         
-        print(f"Переход {part_type}: similarity={transition.similarity:.3f}, use_morph={transition.use_morph}")
+        logger.debug(f"Transition {part_type}: similarity={transition.similarity:.3f}, use_morph={transition.use_morph}")
         
         self.active_transitions[part_type] = transition
     

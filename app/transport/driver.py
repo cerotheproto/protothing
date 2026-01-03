@@ -37,18 +37,18 @@ class Driver:
                 host = parsed.hostname or "10.0.0.2"
                 port = parsed.port or 5555
                 self._transport = UDPTransport(host=host, port=port)
-                logger.info(f"Инициализирован UDP транспорт: {host}:{port}")
+                logger.info(f"Initialized UDP transport: {host}:{port}")
             else:
-                raise ValueError(f"Неизвестный тип транспорта: {scheme}")
+                raise ValueError(f"Unknown transport type: {scheme}")
         
         # WS транспорт инициализируется отдельно если включен в конфиге
         if ws_enabled:
             self._ws_transport = WSTransport()
-            logger.info("Инициализирован WS транспорт на /ws (вспомогательный для отладки)")
+            logger.info("WS transport initialized on /ws (auxiliary for debugging)")
         
         # убедимся что хотя бы один транспорт инициализирован
         if not self._transport and not self._ws_transport:
-            raise ValueError("Должен быть указан хотя бы один транспорт (основной или ws_enabled)")
+            raise ValueError("At least one transport must be specified (main or ws_enabled)")
     
     async def start(self) -> None:
         """Запускает транспорт"""

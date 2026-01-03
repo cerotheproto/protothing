@@ -40,7 +40,7 @@ class WSTransport(TransportBase):
                 else:
                     disconnected.add(ws)
             except Exception as e:
-                logger.error(f"Ошибка отправки в WS: {e}")
+                logger.error(f"Error sending to WS: {e}")
                 disconnected.add(ws)
         
         self._connections -= disconnected
@@ -68,7 +68,7 @@ class WSTransport(TransportBase):
                 else:
                     disconnected.add(ws)
             except Exception as e:
-                logger.error(f"Ошибка отправки LED в WS: {e}")
+                logger.error(f"Error sending LED to WS: {e}")
                 disconnected.add(ws)
         
         self._connections -= disconnected
@@ -77,7 +77,7 @@ class WSTransport(TransportBase):
         return len(self._connections) > 0
     
     async def start(self) -> None:
-        logger.info("WS транспорт запущен")
+        logger.info("WS transport started")
     
     async def stop(self) -> None:
         for ws in list(self._connections):
@@ -86,18 +86,18 @@ class WSTransport(TransportBase):
             except Exception:
                 pass
         self._connections.clear()
-        logger.info("WS транспорт остановлен")
+        logger.info("WS transport stopped")
     
     async def add_connection(self, websocket: WebSocket) -> None:
         """Добавляет новое WS соединение"""
         await websocket.accept()
         self._connections.add(websocket)
-        logger.info(f"WS клиент подключен, всего: {len(self._connections)}")
+        logger.info(f"WS client connected, total: {len(self._connections)}")
     
     async def remove_connection(self, websocket: WebSocket) -> None:
         """Удаляет WS соединение"""
         self._connections.discard(websocket)
-        logger.info(f"WS клиент отключен, всего: {len(self._connections)}")
+        logger.info(f"WS client disconnected, total: {len(self._connections)}")
     
     async def handle_connection(self, websocket: WebSocket) -> None:
         """Обрабатывает WS соединение"""
@@ -116,9 +116,9 @@ class WSTransport(TransportBase):
         """Обрабатывает входящие данные от клиента"""
         try:
             packet = Packet.unpack(data)
-            logger.debug(f"Получен пакет: {packet}")
+            logger.debug(f"Received packet: {packet}")
         except ValueError as e:
-            logger.warning(f"Ошибка парсинга пакета: {e}")
+            logger.warning(f"Error parsing packet: {e}")
 
     async def get_brightness(self):
         pass # not applicable

@@ -1,7 +1,8 @@
 from typing import TYPE_CHECKING
 from models.app_contract import Event, Query, QueryResult
 import random
-
+import logging
+logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from apps.reactive_face.app import ReactiveFaceApp
 
@@ -90,13 +91,13 @@ def handle_events(self: "ReactiveFaceApp", dt: float, events: list[Event]):
                 try:
                     self.audio_processor.start()
                 except Exception as e:
-                    print(f"Ошибка при запуске аудиопроцессора: {e}")
+                    logger.error(f"Error starting audio processor: {e}")
                     self.audio_enabled = False
             else:
                 try:
                     self.audio_processor.stop()
                 except Exception as e:
-                    print(f"Ошибка при остановке аудиопроцессора: {e}")
+                    logger.error(f"Error stopping audio processor: {e}")
 
 def get_events(self) -> list[type[Event]]:
     return [ChangeFaceState, ReloadMetadata, OverrideFacePart, ChangePreset, SetBlinking, SetAudioReactive]
@@ -122,4 +123,4 @@ def handle_queries(self: "ReactiveFaceApp", query: Query) -> QueryResult:
             audio_reactive=self.audio_enabled,
             blinking=self.blink_enabled
         )
-    raise NotImplementedError(f"Запрос {type(query).__name__} не поддерживается")
+    raise NotImplementedError(f"Query {type(query).__name__} is not supported")

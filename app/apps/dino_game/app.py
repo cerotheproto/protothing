@@ -6,6 +6,9 @@ from models.app_contract import Event, Query, QueryResult
 from render.frame_description import FrameDescription, SpriteLayer, TextLayer, FillLayer
 from render.frame import Frame
 import random
+import logging
+
+logger = logging.getLogger(__name__) 
 
 class DinoGameApp(BaseApp):
     name = "dino_game"
@@ -45,7 +48,7 @@ class DinoGameApp(BaseApp):
 
     def load_resources(self):
         if not os.path.exists(self.sprite_sheet_path):
-            print(f"Error: Sprite sheet not found at {self.sprite_sheet_path}")
+            logger.error(f"Sprite sheet not found: {self.sprite_sheet_path}")
             return
 
         sheet = Image.open(self.sprite_sheet_path).convert("RGBA")

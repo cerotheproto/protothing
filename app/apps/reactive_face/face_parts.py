@@ -72,7 +72,7 @@ def load_face_part(
             metadata_path = alt_metadata_path
     
     if not os.path.exists(metadata_path):
-        raise FileNotFoundError(f"Метаданные для {part_type} '{ref}' не найдены: {metadata_path}")
+        raise FileNotFoundError(f"Metadata for {part_type} '{ref}' not found: {metadata_path}")
     
     with open(metadata_path, 'r', encoding='utf-8') as f:
         metadata = yaml.safe_load(f)
@@ -91,14 +91,14 @@ def load_face_part(
         asset_path = os.path.join(part_dir, asset_file)
         
         if not os.path.exists(asset_path):
-            raise FileNotFoundError(f"Ассет не найден: {asset_path}")
+            raise FileNotFoundError(f"Asset not found: {asset_path}")
         
         if state_type == "sprite":
             layer = load_sprite(asset_path, x=position_x, y=position_y)
         elif state_type == "animated_sprite":
             layer = load_animated_sprite(asset_path, x=position_x, y=position_y)
         else:
-            raise ValueError(f"Неизвестный тип слоя: {state_type}")
+            raise ValueError(f"Unknown layer type: {state_type}")
         
         states[state_name] = PartState(name=state_name, layer=layer)
         
@@ -124,7 +124,7 @@ def load_face_preset(
     preset_path = os.path.join(assets_dir, "presets", f"{preset_name}.yaml")
     
     if not os.path.exists(preset_path):
-        raise FileNotFoundError(f"Пресет не найден: {preset_path}")
+        raise FileNotFoundError(f"Preset not found: {preset_path}")
     
     with open(preset_path, 'r', encoding='utf-8') as f:
         preset_data = yaml.safe_load(f)

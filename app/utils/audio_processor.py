@@ -1,7 +1,10 @@
 import numpy as np
 import sounddevice as sd
 import threading
+import logging
 from collections import deque
+
+logger = logging.getLogger(__name__)
 
 
 class AudioProcessor:
@@ -44,10 +47,10 @@ class AudioProcessor:
                 latency='low'
             )
             self.stream.start()
-            print("Аудиопроцессор запущен")
+            logger.info("Audio processor started")
         except Exception as e:
             self.is_running = False
-            print(f"Ошибка при запуске захвата аудио: {e}")
+            logger.error(f"Error starting audio capture: {e}")
             raise
     
     def stop(self):
@@ -61,7 +64,7 @@ class AudioProcessor:
     def _audio_callback(self, indata, frames, time_info, status):
         """Callback для захвата аудиоданных"""
         if status:
-            print(f"Audio stream warning: {status}")
+            logger.warning(f"Audio stream warning: {status}")
         
         # Добавляем аудиоданные в буфер
         with self._lock:

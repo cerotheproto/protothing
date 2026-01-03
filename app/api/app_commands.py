@@ -32,7 +32,7 @@ def create_events_router() -> APIRouter:
         """Отправляет событие в очередь"""
         event_class = get_event_class(event_name)
         if event_class is None:
-            raise HTTPException(status_code=404, detail=f"Тип события '{event_name}' не зарегистрирован")
+            raise HTTPException(status_code=404, detail=f"Event '{event_name}' is not registered")
         
         try:
             event = event_class.model_validate(payload)

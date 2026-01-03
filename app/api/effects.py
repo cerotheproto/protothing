@@ -51,7 +51,7 @@ async def add_effect(request: AddEffectRequest = Body(...)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Ошибка при добавлении эффекта: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error adding effect: {str(e)}")
 
 
 @router.delete("/clear")
@@ -66,8 +66,8 @@ async def remove_effect(effect_id: str):
     """Удаляет конкретный эффект по ID"""
     success = effect_manager.remove_effect_by_id(effect_id)
     if not success:
-        raise HTTPException(status_code=404, detail=f"Эффект с ID {effect_id} не найден")
-    return {"status": "ok", "message": f"Эффект {effect_id} удален"}
+        raise HTTPException(status_code=404, detail=f"Effect with ID {effect_id} not found")
+    return {"status": "ok", "message": f"Effect {effect_id} removed"}
 
 
 @router.get("/available")

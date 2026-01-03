@@ -18,7 +18,7 @@ class EffectManager:
         """Добавляет эффект по имени с параметрами"""
         effect_class = self._available_effects.get(effect_name)
         if effect_class is None:
-            raise ValueError(f"Эффект '{effect_name}' не найден")
+            raise ValueError(f"Effect '{effect_name}' not found")
         
         effect = effect_class(**kwargs)
         effect.id = str(uuid.uuid4())

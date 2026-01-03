@@ -92,7 +92,7 @@ def load_animated_sprite(gif_path: str, x: int = 0, y: int = 0, use_cache: bool 
         pass  # достигли конца GIF
     
     if not frames:
-        raise ValueError(f"GIF файл {gif_path} не содержит фреймов")
+        raise ValueError(f"GIF file {gif_path} contains no frames")
     
     width, height = image.size
     

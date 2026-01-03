@@ -3,6 +3,8 @@ import importlib
 from pathlib import Path
 from apps.base import BaseApp
 from api.app_commands import register_event_type
+import logging
+logger = logging.getLogger(__name__)
 class AppManager:
     def __init__(self):
         self.active_app: BaseApp | None = None
@@ -38,10 +40,10 @@ class AppManager:
                                 # Создаем экземпляр приложения
                                 app_instance = attr()
                                 self.available_apps[app_instance.name] = app_instance
-                                print(f"Загружено приложение: {app_instance.name}")
+                                logger.info(f"Application loaded: {app_instance.name}")
                                 break
                     except Exception as e:
-                        print(f"Ошибка при загрузке приложения из {item.name}: {e}")
+                        logger.error(f"Error loading application from {item.name}: {e}")
 
     def _register_all_events(self):
         """Автоматически регистрирует события всех приложений"""
@@ -53,7 +55,7 @@ class AppManager:
                 if event_name not in registered_events:
                     register_event_type(event_class)
                     registered_events.add(event_name)
-                    print(f"Зарегистрировано событие: {event_name}")
+                    logger.debug(f"Event registered: {event_name}")
 
     def set_active_app(self, app: BaseApp, with_transition: bool = True):
         """Устанавливает активное приложение с опциональным переходом"""
@@ -97,7 +99,7 @@ class AppManager:
                 to_frame=new_frame
             )
         except Exception as e:
-            print(f"Ошибка запуска перехода приложения: {e}")
+            logger.error(f"Error starting application transition: {e}")
     
     def save_last_frame(self, frame):
         """Сохраняет последний кадр для перехода"""
