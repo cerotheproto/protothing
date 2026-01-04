@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 from render.frame import Frame
 from render.frame_description import RainbowEffect
 
@@ -66,13 +67,12 @@ def rainbow_effect(frame: Frame, effect: RainbowEffect, dt: float) -> None:
         # просто фаза для всех пикселей одинаково
         hue = np.full((height, width), (effect._phase / (2.0 * np.pi)) % 1.0)
     
-    # конвертируем HSV в RGB
-    rgb = _hsv_to_rgb(hue, np.ones_like(hue), np.ones_like(hue))
+    # convert HSV to RGB using cv2 (optimized)
+    hsv = np.stack([hue * 180, np.ones_like(hue) * 255, np.ones_like(hue) * 255], axis=-1).astype(np.uint8)
+    rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB).astype(np.float32)
     
-    # применяем оригинальную яркость для каждого канала
-    result = np.zeros_like(pixels)
-    for i in range(3):
-        result[:, :, i] = rgb[:, :, i] * (brightness / 255.0)
+    # apply original brightness to each channel
+    result = rgb * (brightness[:, :, np.newaxis] / 255.0)
     
     # Смешиваем оригинальный цвет и эффект в зависимости от прогресса
     final_pixels = pixels * (1.0 - effect._fade_progress) + result * effect._fade_progress
@@ -81,54 +81,4 @@ def rainbow_effect(frame: Frame, effect: RainbowEffect, dt: float) -> None:
     frame.pixels[non_black_mask] = final_pixels[non_black_mask].astype(np.uint8)
 
 
-def _hsv_to_rgb(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
-    """
-    Конвертирует HSV в RGB.
-    h, s, v: массивы значений от 0 до 1
-    Возвращает RGB массив с значениями от 0 до 255
-    """
-    h = h * 6.0  # масштабируем hue до 0-6
-    i = np.floor(h).astype(np.int32)
-    f = h - i
-    
-    p = v * (1.0 - s)
-    q = v * (1.0 - s * f)
-    t = v * (1.0 - s * (1.0 - f))
-    
-    i = i % 6
-    
-    # выбираем правильные компоненты в зависимости от i
-    rgb = np.zeros((*h.shape, 3), dtype=np.float32)
-    
-    mask0 = (i == 0)
-    mask1 = (i == 1)
-    mask2 = (i == 2)
-    mask3 = (i == 3)
-    mask4 = (i == 4)
-    mask5 = (i == 5)
-    
-    rgb[mask0, 0] = v[mask0]
-    rgb[mask0, 1] = t[mask0]
-    rgb[mask0, 2] = p[mask0]
-    
-    rgb[mask1, 0] = q[mask1]
-    rgb[mask1, 1] = v[mask1]
-    rgb[mask1, 2] = p[mask1]
-    
-    rgb[mask2, 0] = p[mask2]
-    rgb[mask2, 1] = v[mask2]
-    rgb[mask2, 2] = t[mask2]
-    
-    rgb[mask3, 0] = p[mask3]
-    rgb[mask3, 1] = q[mask3]
-    rgb[mask3, 2] = v[mask3]
-    
-    rgb[mask4, 0] = t[mask4]
-    rgb[mask4, 1] = p[mask4]
-    rgb[mask4, 2] = v[mask4]
-    
-    rgb[mask5, 0] = v[mask5]
-    rgb[mask5, 1] = p[mask5]
-    rgb[mask5, 2] = q[mask5]
-    
-    return rgb * 255.0
+

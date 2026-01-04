@@ -6,6 +6,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from render.frame import Frame
+from render.frame_pool import acquire_frame
 from utils.transition import (
     InterpolationMethod, AnimatedParameter, 
     calculate_image_similarity, lerp_array, cosine_interpolation,
@@ -145,13 +146,13 @@ class TransitionEngine:
     
     def _apply_fade_in(self, frame: Frame, t: float) -> Frame:
         """Плавное появление кадра"""
-        result = Frame(frame.width, frame.height)
+        result = acquire_frame(frame.width, frame.height)
         result.pixels = (frame.pixels * t).astype(np.uint8)
         return result
     
     def _crossfade(self, from_frame: Frame, to_frame: Frame, t: float) -> Frame:
         """Кроссфейд между кадрами"""
-        result = Frame(to_frame.width, to_frame.height)
+        result = acquire_frame(to_frame.width, to_frame.height)
         
         smooth_t = cosine_interpolation(0.0, 1.0, t)
         
@@ -165,7 +166,7 @@ class TransitionEngine:
     
     def _morph(self, from_frame: Frame, to_frame: Frame, t: float) -> Frame:
         """Попиксельный морфинг"""
-        result = Frame(to_frame.width, to_frame.height)
+        result = acquire_frame(to_frame.width, to_frame.height)
         
         # используем плавную интерполяцию
         smooth_t = cosine_interpolation(0.0, 1.0, t)
@@ -184,7 +185,7 @@ class TransitionEngine:
         Черный цвет считается прозрачным.
         Старая картинка плавно исчезает в конце.
         """
-        result = Frame(to_frame.width, to_frame.height)
+        result = acquire_frame(to_frame.width, to_frame.height)
         height, width = to_frame.height, to_frame.width
         
         # Плавное исчезновение старого кадра

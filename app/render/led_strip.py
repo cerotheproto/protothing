@@ -3,6 +3,10 @@ from render.frame import Frame
 from render.frame_description import RainbowEffect
 from typing import Optional
 
+# Cache for most common color to avoid recalculating every frame
+_color_cache = {}
+_cache_size_limit = 100
+
 
 def _hsv_to_rgb_single(h: float, s: float = 1.0, v: float = 1.0) -> tuple[int, int, int]:
     """Конвертирует HSV в RGB для одного пикселя"""
@@ -31,25 +35,41 @@ def _hsv_to_rgb_single(h: float, s: float = 1.0, v: float = 1.0) -> tuple[int, i
 
 
 def get_most_common_color(frame: Frame) -> tuple[int, int, int]:
-    """Находит самый встречаемый цвет на кадре (исключая черный)"""
+    """Finds most common color on frame (excluding black) with caching"""
+    # Use hash of frame data for cache key
+    frame_hash = hash(frame.pixels.tobytes())
+    
+    if frame_hash in _color_cache:
+        return _color_cache[frame_hash]
+    
     pixels = frame.pixels.reshape(-1, 3)
     
-    # фильтруем черные пиксели
+    # filter black pixels
     non_black_mask = np.any(pixels > 0, axis=1)
     non_black_pixels = pixels[non_black_mask]
     
     if len(non_black_pixels) == 0:
-        return (0, 0, 0)
+        color = (0, 0, 0)
+    else:
+        # quantize colors for speedup (divide by 16)
+        quantized = (non_black_pixels // 16) * 16
+        
+        # find unique colors and their counts
+        unique, counts = np.unique(quantized, axis=0, return_counts=True)
+        
+        # return most common
+        most_common_idx = np.argmax(counts)
+        color = tuple(unique[most_common_idx])
     
-    # квантуем цвета для ускорения (делим на 16)
-    quantized = (non_black_pixels // 16) * 16
+    # cache result
+    _color_cache[frame_hash] = color
     
-    # находим уникальные цвета и их количество
-    unique, counts = np.unique(quantized, axis=0, return_counts=True)
+    # limit cache size
+    if len(_color_cache) > _cache_size_limit:
+        # remove oldest entry (simple FIFO)
+        _color_cache.pop(next(iter(_color_cache)))
     
-    # возвращаем самый частый
-    most_common_idx = np.argmax(counts)
-    return tuple(unique[most_common_idx])
+    return color
 
 
 def generate_led_strip_pixels(
