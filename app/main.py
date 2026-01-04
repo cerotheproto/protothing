@@ -67,6 +67,7 @@ async def main_loop_task():
             elif isinstance(frame_desc, Frame):
                 frame = frame_desc  # если уже кадр, то просто берем его
             else:
+                await asyncio.sleep(0.01)
                 continue  # пропускаем итерацию, если нет кадра
 
             # применяем переход между кадрами если есть

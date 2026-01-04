@@ -5,3 +5,4 @@ __pycache__/
 .github/
 .DS_Store
 app/logs/
+app/assets/videos/*

@@ -5,6 +5,7 @@ import { getActiveApp } from "@/lib/api/apps";
 import { getEventTypesForApp, type EventSchema, type QuerySchema } from "@/lib/api/events";
 import { GenericEventPage } from "@/components/GenericEventPage";
 import { ReactiveFacePage } from "@/components/ReactiveFacePage";
+import { VideoPlayerPage } from "@/components/VideoPlayerPage";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -55,6 +56,10 @@ export default function EventsPage() {
 
   if (activeApp === "reactive_face") {
     return <ReactiveFacePage activeApp={activeApp} />;
+  }
+
+  if (activeApp === "video_player") {
+    return <VideoPlayerPage activeApp={activeApp} />;
   }
 
   return (
