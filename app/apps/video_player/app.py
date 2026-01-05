@@ -6,6 +6,8 @@ from apps.base import BaseApp
 from render.frame import Frame
 from models.app_contract import Event
 from .events import handle_events, get_events as imported_get_events, get_queries as imported_get_queries, handle_queries
+from render.layers.text import TextLayer
+from render.frame_description import FrameDescription
 import logging
 
 logger = logging.getLogger(__name__)
@@ -92,9 +94,12 @@ class VideoPlayerApp(BaseApp):
     def get_queries(self):
         return imported_get_queries(self)
     
-    def render(self) -> Frame | None:
+    def render(self) -> Frame | FrameDescription| None:
+        if self.current_video is None:
+            return FrameDescription(layers=[TextLayer(x=5, y=2, text="No video\nloaded", font_size=6)])
         if not self.last_frame:
             return None
+        
         return self.last_frame
 
     def _update_video_timing(self):

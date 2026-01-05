@@ -69,6 +69,10 @@ class EffectManager:
         
         # Удаляем только те, которые не перешли в режим остановки
         self.effects = [e for e in self.effects if hasattr(e, '_is_stopping') and e._is_stopping]
+    
+    def is_clearing(self) -> bool:
+        """Проверяет, есть ли эффекты в процессе очистки"""
+        return any(hasattr(e, '_is_stopping') and e._is_stopping for e in self.effects)
 
     def get_available_effects(self) -> list[str]:
         """Возвращает список доступных типов эффектов"""

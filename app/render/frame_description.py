@@ -52,6 +52,14 @@ class TextLayer(Layer):
     color: tuple[int, int, int, int] = (255, 255, 255, 255)  # RGBA
     font_path: str | None = None  # путь к TTF шрифту, если None - используется дефолтный
 
+@dataclass
+class RectLayer(Layer):
+    x: float
+    y: float
+    width: float
+    height: float
+    color: tuple[int, int, int, int]  # RGBA
+
 # ------ типы эффектов ------
 
 @dataclass

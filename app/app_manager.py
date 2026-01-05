@@ -4,12 +4,15 @@ from pathlib import Path
 from apps.base import BaseApp
 from api.app_commands import register_event_type
 import logging
+
 logger = logging.getLogger(__name__)
 class AppManager:
     def __init__(self):
         self.active_app: BaseApp | None = None
         self.available_apps: dict[str, BaseApp] = {}
         self._pending_app: BaseApp | None = None  # приложение ожидающее перехода
+        self._pending_old_app: BaseApp | None = None  # предыдущее приложение
+        self._pending_transition: bool = False  # флаг для включения transition
         self._last_frame = None  # последний кадр для перехода
         self._load_apps()
         self._register_all_events()
@@ -59,18 +62,47 @@ class AppManager:
 
     def set_active_app(self, app: BaseApp, with_transition: bool = True):
         """Устанавливает активное приложение с опциональным переходом"""
-        if self.active_app:
-            self.active_app.stop()
+        from dependencies import effect_manager
+        
+        effect_manager.clear_effects()
         
         old_app = self.active_app
-        self.active_app = app
+        
+        # Переключаемся на новое приложение только после очистки эффектов
+        self._pending_app = app
+        self._pending_old_app = old_app
+        self._pending_transition = with_transition
+
+    def _apply_pending_app(self):
+        """Применяет ожидающее приложение, если эффекты очищены"""
+        from dependencies import effect_manager
+        
+        if self._pending_app is None:
+            return False
+        
+        # Ждем пока эффекты очистятся
+        if effect_manager.is_clearing():
+            return False
+        
+        # Эффекты очистились, теперь переключаемся
+        if self._pending_old_app:
+            self._pending_old_app.stop()
+        
+        self.active_app = self._pending_app
         
         if self.active_app:
             self.active_app.start()
         
         # запускаем переход если нужно и есть предыдущий кадр
-        if with_transition and old_app is not None and self._last_frame is not None:
+        if self._pending_transition and self._pending_old_app is not None and self._last_frame is not None:
             self._start_app_transition()
+        
+        # Очищаем ожидающее приложение
+        self._pending_app = None
+        self._pending_old_app = None
+        self._pending_transition = False
+        
+        return True
 
     
     def _start_app_transition(self):

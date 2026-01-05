@@ -1,9 +1,10 @@
 from render.frame import Frame
-from render.frame_description import FrameDescription, FillLayer, SpriteLayer, AnimatedSpriteLayer, TextLayer, WiggleEffect, DizzyEffect, RainbowEffect, ShakeEffect
+from render.frame_description import FrameDescription, FillLayer, SpriteLayer, AnimatedSpriteLayer, TextLayer, RectLayer, WiggleEffect, DizzyEffect, RainbowEffect, ShakeEffect
 from render.layers.fill import fill_layer
 from render.layers.sprite import sprite_layer
 from render.layers.animated_sprite import animated_sprite_layer
 from render.layers.text import text_layer
+from render.layers.rect import rect_layer
 from render.effects.wiggle import wiggle_effect
 from render.effects.dizzy import dizzy_effect
 from render.effects.rainbow import rainbow_effect
@@ -26,6 +27,8 @@ class Renderer:
                 sprite_layer(frame, layer)
             elif isinstance(layer, TextLayer):
                 text_layer(frame, layer)
+            elif isinstance(layer, RectLayer):
+                rect_layer(frame, layer, dt)
 
         # применяем пост-эффекты к готовому кадру
         if frame_desc.effects:

@@ -48,6 +48,9 @@ async def main_loop_task():
                 except asyncio.QueueEmpty:
                     break
 
+            # пытаемся применить ожидающее приложение если эффекты очистились
+            app_manager._apply_pending_app()
+
             app = app_manager.get_current_app()
             if app is None:
                 await asyncio.sleep(0.01)
