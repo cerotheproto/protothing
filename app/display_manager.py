@@ -16,7 +16,7 @@ class DisplayManager:
     """
     
     def __init__(self):
-        self.mirror_mode = MirrorMode.RIGHT
+        self.mirror_mode = MirrorMode.NONE
     
     def set_mirror_mode(self, mode: MirrorMode) -> None:
         """Устанавливает режим отражения"""

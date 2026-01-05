@@ -67,7 +67,7 @@ class AppManager:
         effect_manager.clear_effects()
         
         old_app = self.active_app
-        
+        old_app.stop() if old_app else None
         # Переключаемся на новое приложение только после очистки эффектов
         self._pending_app = app
         self._pending_old_app = old_app

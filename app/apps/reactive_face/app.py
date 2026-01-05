@@ -1,13 +1,12 @@
 from apps.base import BaseApp
 from models.app_contract import Event, Query, QueryResult
 from apps.reactive_face.face_parts import FacePartsCache, FacePreset
-from apps.reactive_face.events import GetFaceState, FaceStateResult
-from apps.reactive_face.face_parts import FacePartType
 from transition_manager import TransitionManager
 from render.frame_description import FrameDescription
 import dependencies
 from .events import handle_events, get_events as imported_get_events, get_queries as imported_get_queries, handle_queries
 from utils.audio_processor import AudioProcessor
+from display_manager import MirrorMode
 import random
 import logging
 logger = logging.getLogger(__name__)
@@ -52,6 +51,21 @@ class ReactiveFaceApp(BaseApp):
         self._prev_states: dict[str, str] = {}
         self._prev_preset_parts: dict[str, tuple[str, str]] = {}
     
+    def start(self):
+        # reactive_face is only app that needs display mirroring
+        from dependencies import display_manager
+
+        display_manager.set_mirror_mode(MirrorMode.RIGHT)
+        super().start()
+
+    def stop(self):
+        from dependencies import display_manager
+        logger.info("Restoring display mirror mode to NONE")
+        display_manager.set_mirror_mode(MirrorMode.NONE)
+        if self.audio_processor:
+            self.audio_processor.stop()
+        super().stop()   
+
     def _ensure_initialized(self):
         """Ленивая инициализация с загруженным конфигом"""
         if self._initialized:
@@ -149,11 +163,6 @@ class ReactiveFaceApp(BaseApp):
         self.face_parts_cache.reload_metadata()
         if self.current_preset:
             self._load_preset(self.current_preset.name)
-    
-    def stop(self):
-        """Останавливает приложение и освобождает ресурсы"""
-        if self.audio_processor:
-            self.audio_processor.stop()
 
     def _start_blink(self):
         """Начинает анимацию моргания"""
