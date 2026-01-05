@@ -51,6 +51,8 @@ class UDPTransport(TransportBase):
     def set_button_callback(self, callback: Callable[[int], None]) -> None:
         """Устанавливает коллбек для обработки нажатий кнопки"""
         self._button_callback = callback
+        if self._protocol:
+            self._protocol.button_callback = callback
     
     async def send_frame(self, frame_data: bytes) -> None:
         """Отправляет кадр 128x32 на устройство"""

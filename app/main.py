@@ -22,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import logging
 import os
-
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -111,10 +111,20 @@ async def lifespan(app: FastAPI):
     # Здесь указывается какой ивент будет вызываться при нажатии кнопки
     def handle_button_press(button_id: int):
         logger.info(f"Processing button press {button_id}")
-        # TODO: сделать нормальный выбор ивента через конфиг
-        # Сейчас хардкодим вызов JumpEvent для dino_game
-        from apps.dino_game.events import JumpEvent
-        event_queue.put_nowait(JumpEvent())
+        if random.random() < 0.25:
+            app_manager.set_active_app_by_name("video_player")
+            
+            async def switch_back():
+                await asyncio.sleep(10)
+                app_manager.set_active_app_by_name("reactive_face")
+            
+            asyncio.create_task(switch_back())
+        else:
+            logger.info("Sending Boop event")
+            from apps.reactive_face.events import Boop
+            event = Boop()
+            event_queue.put_nowait(event)
+
     
     # Устанавливаем коллбек для UDP транспорта
     if hasattr(driver.transport, 'set_button_callback'):

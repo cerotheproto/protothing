@@ -50,6 +50,12 @@ class ReactiveFaceApp(BaseApp):
         # Предыдущие состояния для отслеживания изменений
         self._prev_states: dict[str, str] = {}
         self._prev_preset_parts: dict[str, tuple[str, str]] = {}
+        
+        # Boop tracking
+        self.boop_active = False
+        self.boop_elapsed_time = 0.0
+        self.boop_prev_eye_state = None
+        self.boop_prev_eye_ref = None
     
     def start(self):
         # reactive_face is only app that needs display mirroring
@@ -218,6 +224,15 @@ class ReactiveFaceApp(BaseApp):
                     self.time_to_next_blink = random.uniform(3, 5)
                     self.blink_elapsed_time = 0.0
 
+    def _update_boop(self, dt: float):
+        """Обновляет состояние boop и возвращает глаз в исходное состояние через 2 секунды"""
+        if self.boop_active:
+            self.boop_elapsed_time += dt
+            if self.boop_elapsed_time >= 2.0:
+                self._override_face_part("eye", self.boop_prev_eye_ref, self.boop_prev_eye_state)
+                self.boop_active = False
+                self.boop_elapsed_time = 0.0
+
     def update(self, dt: float, events: list[Event]):
         self._ensure_initialized()
         
@@ -234,6 +249,9 @@ class ReactiveFaceApp(BaseApp):
             else:
                 # Если моргаем, обновляем длительность
                 self._update_blink(dt)
+        
+        # Обновляем состояние boop
+        self._update_boop(dt)
         
         # Обновляем состояние рта на основе аудио
         if self.audio_enabled:

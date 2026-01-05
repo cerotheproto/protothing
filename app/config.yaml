@@ -3,7 +3,7 @@ system:
   startup_app: "reactive_face"
   target_fps: 60
   ws_enabled: true
-  
+  transport: "udp://127.0.0.1:5555"
 
 reactive_face:
   default_preset: "basic1"

@@ -1,3 +1,4 @@
+import asyncio
 from typing import TYPE_CHECKING
 from models.app_contract import Event, Query, QueryResult
 import random
@@ -46,6 +47,9 @@ class FaceStateResult(QueryResult):
     blinking: bool
     available_parts: dict[str, list[dict]]  # тип части лица -> список доступных частей лица с их метаданными
 
+class Boop(Event):
+    """Event for button press (boop)"""
+    pass
 
 def handle_events(self: "ReactiveFaceApp", dt: float, events: list[Event]):
     self._ensure_initialized()
@@ -98,9 +102,17 @@ def handle_events(self: "ReactiveFaceApp", dt: float, events: list[Event]):
                     self.audio_processor.stop()
                 except Exception as e:
                     logger.error(f"Error stopping audio processor: {e}")
+        elif isinstance(event, Boop):
+            if not self.boop_active and self.current_preset and "eye" in self.current_preset.parts:
+                self.boop_prev_eye_ref, self.boop_prev_eye_state = self.current_preset.parts["eye"]
+                self.boop_active = True
+                self.boop_elapsed_time = 0.0
+                self._override_face_part("eye", ">", "open")
+
+
 
 def get_events(self) -> list[type[Event]]:
-    return [ChangeFaceState, ReloadMetadata, OverrideFacePart, ChangePreset, SetBlinking, SetAudioReactive]
+    return [ChangeFaceState, ReloadMetadata, OverrideFacePart, ChangePreset, SetBlinking, SetAudioReactive, Boop]
 
 def get_queries(self) -> list[type[Query]]:
     return [GetFaceState]
