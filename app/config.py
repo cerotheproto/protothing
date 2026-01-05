@@ -1,11 +1,12 @@
 from pydantic import BaseModel
 import yaml
-from models.config import SystemConfig, ReactiveFaceConfig, LedStripConfig
+from models.config import SystemConfig, ReactiveFaceConfig, LedStripConfig, VideoPlayerConfig
 
 class GlobalConfig(BaseModel):
     system: SystemConfig
     reactive_face: ReactiveFaceConfig
     led_strip: LedStripConfig
+    video_player: VideoPlayerConfig
 
 class Config:
     def __init__(self, path: str = "config.yaml"):

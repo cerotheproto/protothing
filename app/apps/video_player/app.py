@@ -29,7 +29,20 @@ class VideoPlayerApp(BaseApp):
         self.time_accumulator = 0.0
         self.last_frame: Frame | None = None
         self.videos_dir = Path("assets/videos")
+        self._initialized = False
         
+    def _ensure_initialized(self):
+        """Lazy initialization with loaded config"""
+        if self._initialized:
+            return
+        
+        import dependencies
+        default_video = dependencies.config.get().video_player.default_video
+        if default_video:
+            self._open_video(default_video)
+        
+        self._initialized = True
+    
     def _get_videos_list(self) -> list[str]:
         """Get list of video files from assets/videos directory"""
         if not self.videos_dir.exists():
@@ -63,6 +76,7 @@ class VideoPlayerApp(BaseApp):
         
     def start(self):
         super().start()
+        self._ensure_initialized()
         logger.info("Video player started")
         
     def stop(self):
@@ -72,6 +86,7 @@ class VideoPlayerApp(BaseApp):
             self.cap = None
         self.is_playing = False
         self.current_video = None
+        self._initialized = False
         logger.info("Video player stopped")
         
     def update(self, dt: float, events: list[Event]):

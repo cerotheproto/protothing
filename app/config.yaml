@@ -7,6 +7,9 @@ system:
 
 reactive_face:
   default_preset: "basic1"
+
+video_player:
+  default_video: rick.mp4
   
 led_strip:
   led_number: 60

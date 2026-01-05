@@ -14,3 +14,5 @@ class ReactiveFaceConfig(BaseModel):
 class LedStripConfig(BaseModel):
     led_number: int
     
+class VideoPlayerConfig(BaseModel):
+    default_video: str | None = None
