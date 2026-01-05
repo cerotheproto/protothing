@@ -12,4 +12,4 @@ video_player:
   default_video: rick.mp4
   
 led_strip:
-  led_number: 60
+  led_number: 16

@@ -91,3 +91,43 @@ class EffectManager:
     def update_layers_cache(self, layers: list) -> None:
         """Обновляет кеш слоев для cleanup"""
         self._layers_cache = layers
+
+    def save_effect_params(self) -> list[tuple[str, dict]]:
+        """Сохраняет параметры текущих эффектов без их состояния"""
+        effect_params = []
+        for effect in self.effects:
+            effect_name = None
+            params = {}
+            
+            # Find effect name and extract params
+            for name, effect_class in self._available_effects.items():
+                if isinstance(effect, effect_class):
+                    effect_name = name
+                    break
+            
+            if effect_name is None:
+                continue
+            
+            # Get effect parameters (excluding private fields and id)
+            import dataclasses
+            for field in dataclasses.fields(effect):
+                if field.name.startswith('_') or field.name == 'id':
+                    continue
+                value = getattr(effect, field.name)
+                # Skip numpy arrays and complex objects
+                if not isinstance(value, (list, dict)):
+                    params[field.name] = value
+            
+            effect_params.append((effect_name, params))
+        
+        return effect_params
+    
+    def restore_effects(self, effect_params: list[tuple[str, dict]]) -> None:
+        """Восстанавливает эффекты по сохраненным параметрам"""
+        for effect_name, params in effect_params:
+            try:
+                self.add_effect_by_name(effect_name, **params)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to restore effect '{effect_name}': {e}")

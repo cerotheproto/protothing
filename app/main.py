@@ -111,13 +111,16 @@ async def lifespan(app: FastAPI):
     # Здесь указывается какой ивент будет вызываться при нажатии кнопки
     def handle_button_press(button_id: int):
         logger.info(f"Processing button press {button_id}")
+
         if random.random() < 0.25:
+            effect_params = effect_manager.save_effect_params()
             app_manager.set_active_app_by_name("video_player")
             
             async def switch_back():
-                await asyncio.sleep(10)
+                await asyncio.sleep(10)    
                 app_manager.set_active_app_by_name("reactive_face")
-            
+                await asyncio.sleep(1)  # даём время на переключение
+                effect_manager.restore_effects(effect_params)
             asyncio.create_task(switch_back())
         else:
             logger.info("Sending Boop event")
