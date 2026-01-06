@@ -12,3 +12,4 @@ python-xlib
 sounddevice
 opencv-python
 fastcrc
+python-multipart
