@@ -16,3 +16,4 @@ class LedStripConfig(BaseModel):
     
 class VideoPlayerConfig(BaseModel):
     default_video: str | None = None
+    max_fps: int = 30

@@ -25,11 +25,16 @@ class VideoPlayerApp(BaseApp):
         self.frame_width = 64
         self.frame_height = 32
         self.video_fps = 60.0
+        self.playback_fps = 30.0
         self.frame_interval = 1 / self.video_fps
         self.time_accumulator = 0.0
+        self.frame_step = 1
+        self.max_frame_batch = 3
         self.last_frame: Frame | None = None
         self.videos_dir = Path("assets/videos")
         self._initialized = False
+        self.resize_interpolation = cv2.INTER_LINEAR
+        self.target_output_fps = 30.0
         
     def _ensure_initialized(self):
         """Lazy initialization with loaded config"""
@@ -37,7 +42,9 @@ class VideoPlayerApp(BaseApp):
             return
         
         import dependencies
-        default_video = dependencies.config.get().video_player.default_video
+        cfg = dependencies.config.get().video_player
+        self.target_output_fps = min(cfg.max_fps, 60)
+        default_video = cfg.default_video
         if default_video:
             self._open_video(default_video)
         
@@ -68,6 +75,8 @@ class VideoPlayerApp(BaseApp):
             logger.error(f"Failed to open video: {video_path}")
             return False
         
+        self._configure_capture()
+        
         self.current_video = video_name
         self.is_playing = True
         self._update_video_timing()
@@ -95,10 +104,19 @@ class VideoPlayerApp(BaseApp):
             return
 
         self.time_accumulator += dt
-        while self.time_accumulator >= self.frame_interval:
-            if not self._read_and_process_frame():
-                break
-            self.time_accumulator -= self.frame_interval
+        max_accumulator = self.frame_interval * self.max_frame_batch
+        if self.time_accumulator > max_accumulator:
+            self.time_accumulator = max_accumulator
+
+        if self.time_accumulator < self.frame_interval:
+            return
+
+        frames_due = max(1, int(self.time_accumulator / self.frame_interval))
+        frames_due = min(frames_due, self.max_frame_batch)
+        self.time_accumulator -= frames_due * self.frame_interval
+
+        if not self._read_and_process_frame(frames_due):
+            self.is_playing = False
     
     def handle_query(self, query):
         return handle_queries(self, query)
@@ -123,11 +141,17 @@ class VideoPlayerApp(BaseApp):
         fps = self.cap.get(cv2.CAP_PROP_FPS)
         validated_fps = fps if fps and fps >= 1.0 else 60.0
         self.video_fps = validated_fps
-        self.frame_interval = 1 / self.video_fps
+        self.playback_fps = min(self.video_fps, self.target_output_fps)
+        self.frame_interval = 1 / self.playback_fps
         self.time_accumulator = 0.0
+        self.frame_step = max(1, int(round(self.video_fps / self.playback_fps)))
 
-    def _read_and_process_frame(self) -> bool:
+    def _read_and_process_frame(self, frames_due: int = 1) -> bool:
         if not self.cap:
+            return False
+
+        frames_to_skip = max(0, frames_due * self.frame_step - 1)
+        if frames_to_skip and not self._skip_frames(frames_to_skip):
             return False
 
         ret, frame = self.cap.read()
@@ -140,6 +164,25 @@ class VideoPlayerApp(BaseApp):
         self.last_frame = self._create_frame(frame)
         return True
 
+    def _skip_frames(self, count: int) -> bool:
+        if not self.cap:
+            return False
+
+        for _ in range(count):
+            if self.cap.grab():
+                continue
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            if not self.cap.grab():
+                return False
+        return True
+
+    def _configure_capture(self):
+        if not self.cap:
+            return
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
+
     def _create_frame(self, frame: np.ndarray) -> Frame:
         height, width = frame.shape[:2]
         scale_width = self.frame_width / width
@@ -149,7 +192,7 @@ class VideoPlayerApp(BaseApp):
         new_width = max(1, int(width * scale))
         new_height = max(1, int(height * scale))
 
-        resized = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
+        resized = cv2.resize(frame, (new_width, new_height), interpolation=self.resize_interpolation)
         frame_rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
 
         result_frame = Frame(self.frame_width, self.frame_height)

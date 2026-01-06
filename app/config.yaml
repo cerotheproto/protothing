@@ -10,6 +10,9 @@ reactive_face:
 
 video_player:
   default_video: rick.mp4
+  max_fps: 60
   
 led_strip:
   led_number: 16
+
+
