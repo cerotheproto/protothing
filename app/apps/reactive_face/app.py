@@ -167,6 +167,7 @@ class ReactiveFaceApp(BaseApp):
     def reload_metadata(self):
         """Перезагружает метаданные частей лица"""
         self.face_parts_cache.reload_metadata()
+        self.transition_manager.clear_cache()
         if self.current_preset:
             self._load_preset(self.current_preset.name)
 

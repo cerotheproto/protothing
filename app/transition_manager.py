@@ -38,6 +38,8 @@ class PartTransition:
     _from_y: float = field(default=0.0, repr=False)  # исходная координата Y
     _to_x: float = field(default=0.0, repr=False)    # целевая координата X
     _to_y: float = field(default=0.0, repr=False)    # целевая координата Y
+    _cache_key: tuple | None = field(default=None, repr=False)
+    _cache_notified: bool = field(default=False, repr=False)
     
     def __post_init__(self):
         if self.progress is None:
@@ -49,6 +51,27 @@ class PartTransition:
         
         # кешируем пиксели и координаты
         self._cache_pixels()
+        self._calculate_cache_key()
+
+    def _calculate_cache_key(self):
+        """Вычисляет ключ для кеширования кадров перехода"""
+        def get_layer_id(layer):
+            if isinstance(layer, AnimatedSpriteLayer):
+                # Для анимированных слоев учитываем текущий кадр
+                return (id(layer), layer.current_frame)
+            return (id(layer), -1)
+
+        from_id = get_layer_id(self.from_state.layer) if self.from_state else None
+        to_id = get_layer_id(self.to_state.layer)
+        
+        self._cache_key = (
+            self.part_type,
+            from_id,
+            to_id,
+            self.use_morph,
+            self.use_jump_transition,
+            self.force_crossfade
+        )
     
     def _cache_pixels(self):
         """Кеширует пиксели состояний и координаты для быстрого смешивания"""
@@ -126,6 +149,16 @@ class TransitionManager:
         self.morph_duration: int = 140  # затяжной морф для схожих картинок (≈2.3 с при 60fps)
         self.jump_duration: int = 60
         self.method: InterpolationMethod = InterpolationMethod.COSINE
+        
+        # Кеш кадров переходов: (key, step) -> SpriteLayer
+        # step = int(t * 100)
+        self._frame_cache: dict[tuple, SpriteLayer] = {} 
+        self._cache_hits = 0
+    
+    def clear_cache(self):
+        """Очищает кеш переходов"""
+        self._frame_cache.clear()
+        self._cache_hits = 0
     
     def start_transition(
         self, 
@@ -204,9 +237,31 @@ class TransitionManager:
         """
         t = transition.progress.value
         
+        # Проверяем кеш
+        cache_step = int(t * 100)
+        cache_key = None
+        
+        if transition._cache_key:
+            cache_key = (transition._cache_key, cache_step)
+            if cache_key in self._frame_cache:
+                self._cache_hits += 1
+                if not transition._cache_notified:
+                    logger.debug(f"Transition {transition.part_type}: cache HIT (using pre-calculated frames)")
+                    transition._cache_notified = True
+                return self._frame_cache[cache_key]
+            
+            if not transition._cache_notified:
+                logger.debug(f"Transition {transition.part_type}: cache MISS (calculating and saving frames)")
+                transition._cache_notified = True
+        
         if transition.from_state is None:
             # нет исходного состояния, просто применяем альфу
-            return self._apply_fade_in(transition.to_state.layer, t)
+            result = self._apply_fade_in(transition.to_state.layer, t)
+            
+            # Кешируем если возможно
+            if cache_key:
+                self._frame_cache[cache_key] = result
+            return result
 
         # если ничего не поменялось, не дергаем слой
         if (
@@ -218,6 +273,22 @@ class TransitionManager:
             and transition.similarity > 0.985
         ):
             return transition.to_state.layer
+        
+        if transition.use_jump_transition:
+            # прыжок для переходов между приложениями
+            result = self._blend_jump(transition, t)
+        elif transition.use_morph:
+            # попиксельный морфинг для похожих картинок
+            result = self._blend_morph(transition, t)
+        else:
+            # кроссфейд для непохожих частей лица
+            result = self._blend_crossfade(transition, t)
+            
+        # Кешируем результат
+        if cache_key:
+            self._frame_cache[cache_key] = result
+            
+        return result
         
         if transition.use_jump_transition:
             # прыжок для переходов между приложениями
