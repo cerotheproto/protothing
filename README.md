@@ -20,6 +20,8 @@ Modular app platform for LED matrix displays
 ```
 cd app
 pip3 install -r requirements.txt
+mv config.example.yaml config.yaml
+nano config.yaml # if needed
 python3 main.py
 ```
 
