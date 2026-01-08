@@ -1,7 +1,7 @@
 """
 sorry for comments in russian, i had no plans to share this code publicly
 they are just for my own understanding
-maybe i'll translate them later and document all properly
+maybe i'll translate them later and document everthing properly (if i ever get to it)
 """
 
 from contextlib import asynccontextmanager
@@ -106,28 +106,42 @@ async def lifespan(app: FastAPI):
     cfg = config.get()
     driver.init_from_config(cfg.system.transport, ws_enabled=cfg.system.ws_enabled)
     await driver.start()
-    
-    # ХАРДКОД: обработчик нажатия кнопки
-    # Здесь указывается какой ивент будет вызываться при нажатии кнопки
+
+    saved_effect_params = None
+
     def handle_button_press(button_id: int):
-        logger.info(f"Processing button press {button_id}")
+        nonlocal saved_effect_params
+        logger.info(f"Processing button press {button_id}")                    
+        match app_manager.get_current_app().name:
+            case "reactive_face":
+                if random.random() < 0.15: # 15% шанс тролинга
+                #if True: # для теста
+                    if random.random() < 0.5: 
+                        saved_effect_params = effect_manager.save_effect_params()
+                        app_manager.set_active_app_by_name("video_player")
+                        async def switch_back():
+                            await asyncio.sleep(5)    
+                            app_manager.set_active_app_by_name("reactive_face")
+                            await asyncio.sleep(1)  # даём время на переключение
+                            effect_manager.restore_effects(saved_effect_params)
+                    else:
+                        saved_effect_params = effect_manager.save_effect_params()
+                        app_manager.set_active_app_by_name("bsod")
+                    asyncio.create_task(switch_back())
 
-        if random.random() < 0.25:
-            effect_params = effect_manager.save_effect_params()
-            app_manager.set_active_app_by_name("video_player")
-            
-            async def switch_back():
-                await asyncio.sleep(10)    
+                else:
+                    logger.info("Sending Boop event")
+                    from apps.reactive_face.events import Boop
+                    event = Boop()
+                    event_queue.put_nowait(event)
+            case "bsod":
                 app_manager.set_active_app_by_name("reactive_face")
-                await asyncio.sleep(1)  # даём время на переключение
-                effect_manager.restore_effects(effect_params)
-            asyncio.create_task(switch_back())
-        else:
-            logger.info("Sending Boop event")
-            from apps.reactive_face.events import Boop
-            event = Boop()
-            event_queue.put_nowait(event)
+                async def switch_back_effects():
+                    await asyncio.sleep(1)  # даём время на переключение
+                    effect_manager.restore_effects(saved_effect_params)
+                asyncio.create_task(switch_back_effects())
 
+                
     
     # Устанавливаем коллбек для UDP транспорта
     if hasattr(driver.transport, 'set_button_callback'):
