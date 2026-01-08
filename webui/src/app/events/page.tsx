@@ -7,6 +7,7 @@ import { GenericEventPage } from "@/components/GenericEventPage";
 import { ReactiveFacePage } from "@/components/ReactiveFacePage";
 import { VideoPlayerPage } from "@/components/VideoPlayerPage";
 import { PongPage } from "@/components/PongPage";
+import { SnakePage } from "@/components/SnakePage";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -62,6 +63,8 @@ export default function EventsPage() {
       return <VideoPlayerPage activeApp={activeApp} />;
     case "pong":
       return <PongPage activeApp={activeApp} />;
+    case "snake":
+      return <SnakePage activeApp={activeApp} />;
     default:
       break;
   }
