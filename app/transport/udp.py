@@ -1,6 +1,7 @@
 import logging
 import asyncio
 from typing import Optional, Tuple, Callable
+from time import time
 from transport.base import TransportBase
 from transport.proto import Packet, TYPE_BUTTON
 
@@ -130,6 +131,8 @@ class _UDPProtocol(asyncio.DatagramProtocol):
     
     def __init__(self, button_callback: Optional[Callable[[int], None]] = None):
         self.button_callback = button_callback
+        self._last_error_time = 0
+        self._error_throttle_interval = 5.0
     
     def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
         """Handles incoming UDP packets"""
@@ -149,7 +152,10 @@ class _UDPProtocol(asyncio.DatagramProtocol):
     
     def error_received(self, exc: Exception) -> None:
         """Handles UDP errors"""
-        logger.error(f"UDP error: {exc}")
+        current_time = time()
+        if current_time - self._last_error_time >= self._error_throttle_interval:
+            logger.error(f"UDP error: {exc}")
+            self._last_error_time = current_time
     
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Called when the connection is lost"""
