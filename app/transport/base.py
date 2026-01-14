@@ -30,11 +30,11 @@ class TransportBase(ABC):
         pass
 
     @abstractmethod
-    def set_brightness(self, level: int) -> None:
+    async def set_brightness(self, level: int) -> None:
         """Устанавливает яркость дисплея"""
         pass
 
     @abstractmethod
-    def get_brightness(self) -> int:
+    async def get_brightness(self) -> int:
         """Возвращает текущий уровень яркости дисплея"""
         pass

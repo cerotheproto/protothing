@@ -121,7 +121,7 @@ class WSTransport(TransportBase):
             logger.warning(f"Error parsing packet: {e}")
 
     async def get_brightness(self):
-        pass # not applicable
+        return 0 # not applicable
 
     async def set_brightness(self, brightness: int):
         pass # not applicable

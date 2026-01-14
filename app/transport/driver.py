@@ -83,10 +83,18 @@ class Driver:
         """Возвращает WS транспорт для регистрации эндпоинта"""
         return self._ws_transport
     
-    def set_brightness(self, level: int) -> None:
+    async def set_brightness(self, level: int) -> None:
         if self._transport:
-            self._transport.set_brightness(level)
-        # для ws не преминимо 
+            await self._transport.set_brightness(level)
+        if self._ws_transport:
+            await self._ws_transport.set_brightness(level)
+
+    async def get_brightness(self) -> int:
+        if self._transport:
+            return await self._transport.get_brightness()
+        if self._ws_transport:
+            return await self._ws_transport.get_brightness()
+        return 0 
 
     @property
     def transport(self) -> Optional[TransportBase]:

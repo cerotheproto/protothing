@@ -100,7 +100,7 @@ class UDPTransport(TransportBase):
         """Checks connection (UDP has no connection state, returns True if initialized)"""
         return self._transport is not None
     
-    def set_brightness(self, level: int) -> None:
+    async def set_brightness(self, level: int) -> None:
         """Sets the display brightness level (0-255)"""
         if not self._transport:
             logger.warning("UDP transport is not initialized")
@@ -121,7 +121,7 @@ class UDPTransport(TransportBase):
         except Exception as e:
             logger.error(f"Error sending brightness command: {e}")
     
-    def get_brightness(self) -> int:
+    async def get_brightness(self) -> int:
         """Returns the current display brightness level"""
         return self._brightness
 
