@@ -44,7 +44,7 @@ class Driver:
         # WS транспорт инициализируется отдельно если включен в конфиге
         if ws_enabled:
             self._ws_transport = WSTransport()
-            logger.info("WS transport initialized on /ws (auxiliary for debugging)")
+            logger.info("WS transport initialized on /api/ws")
         
         # убедимся что хотя бы один транспорт инициализирован
         if not self._transport and not self._ws_transport:

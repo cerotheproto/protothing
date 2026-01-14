@@ -5,29 +5,28 @@ import { ProtocolParser, type FramePayload } from "@/lib/proto";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Button } from "@/components/ui/button";
 import { setMirrorMode } from "@/lib/api/mirror";
-const URL = process.env.NEXT_PUBLIC_API_URL;
-const ws = new WebSocket(`ws://${URL?.replace(/^https?:\/\//, '')}/ws`);
-ws.binaryType = "arraybuffer";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+const getWebSocketUrl = () => {
+    if (!API_URL) return null;
+    
+    try {
+        const urlObj = new URL(API_URL);
+        const protocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${protocol}//${urlObj.host}${urlObj.pathname}/ws`;
+    } catch {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${protocol}//${window.location.host}${API_URL}/ws`;
+    }
+};
+
+let ws: WebSocket | null = null;
 let canvasL: HTMLCanvasElement | null = null;
 let canvasR: HTMLCanvasElement | null = null;
 const width = 128;
 const height = 32;
 const MIN_SCALE = 6;
 const MAX_SCALE = 10;
-
-ws.addEventListener("message", async (event) => {
-    try {
-        const message = await ProtocolParser.parsePacket(event.data);
-        if (message.payload && typeof message.payload === "object" && "frameId" in message.payload) {
-            const frame = message.payload as FramePayload;
-            renderFrame(frame);
-        }
-    }
-    catch (e) {
-        console.error("Error parsing message:", e);
-    }
-
-});
 
 function renderFrame(frame: FramePayload) {
     // splits frame into left and right
@@ -75,6 +74,31 @@ function drawToCanvas(canvas: HTMLCanvasElement | null, pixels: Uint8Array) {
 }
 export default function PreviewPage() {
     const [scale, setScale] = useState(MAX_SCALE);
+
+    useEffect(() => {
+        const wsUrl = getWebSocketUrl();
+        if (wsUrl) {
+            ws = new WebSocket(wsUrl);
+            ws.binaryType = "arraybuffer";
+            
+            ws.addEventListener("message", async (event) => {
+                try {
+                    const message = await ProtocolParser.parsePacket(event.data);
+                    if (message.payload && typeof message.payload === "object" && "frameId" in message.payload) {
+                        const frame = message.payload as FramePayload;
+                        renderFrame(frame);
+                    }
+                }
+                catch (e) {
+                    console.error("Error parsing message:", e);
+                }
+            });
+        }
+
+        return () => {
+            if (ws) ws.close();
+        };
+    }, []);
 
     useEffect(() => {
         const calculateScale = () => {

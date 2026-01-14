@@ -160,7 +160,7 @@ async def lifespan(app: FastAPI):
         async def websocket_endpoint(websocket: WebSocket):
             await ws_transport.handle_connection(websocket)
         
-        app.add_websocket_route("/ws", websocket_endpoint)
+        app.add_websocket_route("/api/ws", websocket_endpoint)
     
     # запускаем главный цикл как фоновую задачу
     loop_task = asyncio.create_task(main_loop_task())
@@ -219,31 +219,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(apps_router, prefix="/apps", tags=["apps"])
-app.include_router(config_router, prefix="/config", tags=["config"])
-app.include_router(effects_router, prefix="/effects", tags=["effects"])
-app.include_router(display_router, prefix="/display", tags=["display"])
-app.include_router(files_router, prefix="/files", tags=["files"])
-app.include_router(create_events_router(), prefix="/events", tags=["events"])
-app.include_router(brightness_router, prefix="/brightness", tags=["brightness"])
+app.include_router(apps_router, prefix="/api/apps", tags=["apps"])
+app.include_router(config_router, prefix="/api/config", tags=["config"])
+app.include_router(effects_router, prefix="/api/effects", tags=["effects"])
+app.include_router(display_router, prefix="/api/display", tags=["display"])
+app.include_router(files_router, prefix="/api/files", tags=["files"])
+app.include_router(create_events_router(), prefix="/api/events", tags=["events"])
+app.include_router(brightness_router, prefix="/api/brightness", tags=["brightness"])
 
 # регистрируем роутеры приложений на основе их контрактов
 for app_instance in app_manager.get_available_apps():
     router = generate_app_router(app_instance)
-    app.include_router(router, prefix=f"/apps/{app_instance.name}", tags=[app_instance.name])
+    app.include_router(router, prefix=f"/api/apps/{app_instance.name}", tags=[app_instance.name])
 
 # настраиваем reverse proxy для WebUI если включен (должен быть в конце для совпадения всех остальных маршрутов)
 cfg = config.get()
 if cfg.webui.enabled:
+    from fastapi.responses import StreamingResponse
+    
     @app.get("/{path_name:path}")
     async def webui_proxy_get(path_name: str):
-        if path_name.startswith(("api/", "apps/", "config/", "effects/", "display/", "files/", "events/", "brightness/", "ws")):
-            return None
         try:
             async with AsyncClient() as client:
                 url = f"http://localhost:{cfg.webui.port}/{path_name}"
                 response = await client.get(url, follow_redirects=True)
-                return response.content
+                
+                headers = dict(response.headers)
+                headers.pop("content-encoding", None)
+                
+                return StreamingResponse(
+                    iter([response.content]),
+                    status_code=response.status_code,
+                    headers=headers
+                )
         except Exception as e:
             logger.warning(f"WebUI proxy error for {path_name}: {e}")
             return None

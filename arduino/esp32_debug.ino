@@ -15,7 +15,7 @@ const char* password = "RLoztPcQ";
 // WebSocket server
 const char* ws_host = "192.168.1.221";
 const uint16_t ws_port = 8000;
-const char* ws_path = "/ws";
+const char* ws_path = "/api/ws";
 
 // Panel config
 #define PANEL_WIDTH 64
