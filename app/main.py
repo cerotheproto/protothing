@@ -6,6 +6,7 @@ maybe i'll translate them later and document everthing properly (if i ever get t
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
+from httpx import AsyncClient
 from api.apps import app_router as apps_router
 from api.config import config_router as config_router
 from api.app_commands import generate_app_router, event_queue, create_events_router
@@ -23,6 +24,7 @@ import asyncio
 import logging
 import os
 import random
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +110,7 @@ async def lifespan(app: FastAPI):
     await driver.start()
 
     saved_effect_params = None
+    webui_process = None
 
     def handle_button_press(button_id: int):
         nonlocal saved_effect_params
@@ -162,6 +165,30 @@ async def lifespan(app: FastAPI):
     # запускаем главный цикл как фоновую задачу
     loop_task = asyncio.create_task(main_loop_task())
     
+    # запускаем WebUI если включен в конфиге
+    if cfg.webui.enabled:
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        webui_path = os.path.normpath(os.path.join(project_root, cfg.webui.path))
+        if os.path.exists(webui_path):
+            logger.info(f"Starting WebUI from {webui_path} with command: {cfg.webui.run_cmd}")
+            try:
+                os.makedirs("logs", exist_ok=True)
+                webui_log_path = os.path.join(os.path.dirname(__file__), "logs", "webui.log")
+                with open(webui_log_path, "a") as log_file:
+                    webui_process = subprocess.Popen(
+                        cfg.webui.run_cmd,
+                        shell=True,
+                        cwd=webui_path,
+                        stdout=log_file,
+                        stderr=log_file
+                    )
+                    # даём времени на загрузку
+                    await asyncio.sleep(3)
+            except Exception as e:
+                logger.error(f"Failed to start WebUI: {e}")
+        else:
+            logger.warning(f"WebUI path not found: {webui_path}")
+    
     yield
     
     # остановка при завершении
@@ -171,18 +198,18 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     
+    if webui_process:
+        logger.info("Stopping WebUI process")
+        webui_process.terminate()
+        try:
+            webui_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            webui_process.kill()
+    
     await driver.stop()
 
 
 app = FastAPI(lifespan=lifespan)
-
-app.include_router(apps_router, prefix="/apps", tags=["apps"])
-app.include_router(config_router, prefix="/config", tags=["config"])
-app.include_router(effects_router, prefix="/effects", tags=["effects"])
-app.include_router(display_router, prefix="/display", tags=["display"])
-app.include_router(files_router, prefix="/files", tags=["files"])
-app.include_router(create_events_router(), prefix="/events", tags=["events"])
-app.include_router(brightness_router, prefix="/brightness", tags=["brightness"])
 
 app.add_middleware(
     CORSMiddleware,
@@ -192,10 +219,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(apps_router, prefix="/apps", tags=["apps"])
+app.include_router(config_router, prefix="/config", tags=["config"])
+app.include_router(effects_router, prefix="/effects", tags=["effects"])
+app.include_router(display_router, prefix="/display", tags=["display"])
+app.include_router(files_router, prefix="/files", tags=["files"])
+app.include_router(create_events_router(), prefix="/events", tags=["events"])
+app.include_router(brightness_router, prefix="/brightness", tags=["brightness"])
+
 # регистрируем роутеры приложений на основе их контрактов
 for app_instance in app_manager.get_available_apps():
     router = generate_app_router(app_instance)
     app.include_router(router, prefix=f"/apps/{app_instance.name}", tags=[app_instance.name])
+
+# настраиваем reverse proxy для WebUI если включен (должен быть в конце для совпадения всех остальных маршрутов)
+cfg = config.get()
+if cfg.webui.enabled:
+    @app.get("/{path_name:path}")
+    async def webui_proxy_get(path_name: str):
+        if path_name.startswith(("api/", "apps/", "config/", "effects/", "display/", "files/", "events/", "brightness/", "ws")):
+            return None
+        try:
+            async with AsyncClient() as client:
+                url = f"http://localhost:{cfg.webui.port}/{path_name}"
+                response = await client.get(url, follow_redirects=True)
+                return response.content
+        except Exception as e:
+            logger.warning(f"WebUI proxy error for {path_name}: {e}")
+            return None
 
 if __name__ == "__main__":
     import uvicorn

@@ -15,4 +15,10 @@ video_player:
 led_strip:
   led_number: 16
 
+webui:
+  enabled: true
+  path: "webui"
+  run_cmd: "pnpm start"
+  port: 3000
+
 

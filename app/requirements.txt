@@ -6,6 +6,7 @@ pydantic
 PyYAML
 pytest
 requests
+httpx
 Pillow
 mss
 python-xlib

@@ -17,3 +17,9 @@ class LedStripConfig(BaseModel):
 class VideoPlayerConfig(BaseModel):
     default_video: str | None = None
     max_fps: int = 30
+
+class WebUIConfig(BaseModel):
+    enabled: bool = False
+    path: str = "../webui"
+    port: int = 3000
+    run_cmd: str | None = "pnpm start"
