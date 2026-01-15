@@ -17,21 +17,35 @@ Modular app platform for LED matrix displays
 ### Prerequisites
 - Python 3.10+
 - Node.js 22+
+
+#### Backend Setup
 ```
 cd app
 pip3 install -r requirements.txt
 mv config.example.yaml config.yaml
 nano config.yaml # if needed
-python3 main.py
 ```
 
+#### Frontend Setup
 ```
 cd webui
 pnpm install
-pnpm dev
+pnpm build
 ```
+#### Running the Application
+```
+cd app
+python3 main.py
+```
+You can access the web UI at `http://localhost:8000`
 
-You can access the web UI at `http://localhost:3000`
+#### Frontend Development
+```
+cd webui
+nano .env # set NEXT_PUBLIC_API_URL=http://localhost:8000
+pnpm dev 
+```
+You can access the web UI with hot reload at `http://localhost:3000`
 
 ## Hardware Setup
 Will be someday
