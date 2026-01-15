@@ -3,7 +3,7 @@ from typing import Optional, Set
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
 from transport.base import TransportBase
-from transport.proto import Packet
+from transport.proto import Packet, CMD_BRIGHTNESS
 
 
 logger = logging.getLogger(__name__)
@@ -16,6 +16,7 @@ class WSTransport(TransportBase):
         self._connections: Set[WebSocket] = set()
         self._seq: int = 0
         self._led_seq: int = 0
+        self._brightness: int = 150
     
     async def send_frame(self, frame_data: bytes) -> None:
         """Отправляет кадр всем подключенным клиентам"""
@@ -73,6 +74,28 @@ class WSTransport(TransportBase):
         
         self._connections -= disconnected
     
+    async def _broadcast_brightness(self) -> None:
+        """Отправляет текущий уровень яркости всем подключенным клиентам"""
+        if not self._connections:
+            return
+        
+        packet = Packet.make_cmd(CMD_BRIGHTNESS, bytes([self._brightness]), seq=self._seq)
+        self._seq = (self._seq + 1) & 0xFFFF
+        data = packet.pack()
+        
+        disconnected = set()
+        for ws in self._connections:
+            try:
+                if ws.client_state == WebSocketState.CONNECTED:
+                    await ws.send_bytes(data)
+                else:
+                    disconnected.add(ws)
+            except Exception as e:
+                logger.error(f"Error sending brightness to WS: {e}")
+                disconnected.add(ws)
+        
+        self._connections -= disconnected
+    
     async def is_connected(self) -> bool:
         return len(self._connections) > 0
     
@@ -93,6 +116,16 @@ class WSTransport(TransportBase):
         await websocket.accept()
         self._connections.add(websocket)
         logger.info(f"WS client connected, total: {len(self._connections)}")
+        
+        # send current brightness to new client
+        try:
+            packet = Packet.make_cmd(CMD_BRIGHTNESS, bytes([self._brightness]), seq=self._seq)
+            self._seq = (self._seq + 1) & 0xFFFF
+            data = packet.pack()
+            if websocket.client_state == WebSocketState.CONNECTED:
+                await websocket.send_bytes(data)
+        except Exception as e:
+            logger.error(f"Error sending initial brightness to WS: {e}")
     
     async def remove_connection(self, websocket: WebSocket) -> None:
         """Удаляет WS соединение"""
@@ -121,7 +154,8 @@ class WSTransport(TransportBase):
             logger.warning(f"Error parsing packet: {e}")
 
     async def get_brightness(self):
-        return 0 # not applicable
+        return self._brightness
 
     async def set_brightness(self, brightness: int):
-        pass # not applicable
+        self._brightness = brightness
+        await self._broadcast_brightness()

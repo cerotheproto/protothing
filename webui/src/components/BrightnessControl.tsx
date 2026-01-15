@@ -40,7 +40,7 @@ export function BrightnessControl() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">Яркость</label>
+        <label className="text-sm font-medium">Brightness</label>
         <span className="text-sm text-gray-500">{brightness}</span>
       </div>
       <input
