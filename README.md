@@ -42,7 +42,7 @@ You can access the web UI at `http://localhost:8000`
 #### Frontend Development
 ```
 cd webui
-nano .env # set NEXT_PUBLIC_API_URL=http://localhost:8000
+nano .env # set NEXT_PUBLIC_API_URL=http://localhost:8000/api
 pnpm dev 
 ```
 You can access the web UI with hot reload at `http://localhost:3000`
