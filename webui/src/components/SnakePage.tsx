@@ -85,7 +85,7 @@ export function SnakePage({ activeApp }: { activeApp: string }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4 space-y-8">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] md:min-h-screen p-4 space-y-8">
       <div className="grid grid-cols-3 gap-4 w-full max-w-md">
         <div></div>
         <Button

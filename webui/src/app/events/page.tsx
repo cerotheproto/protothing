@@ -43,7 +43,7 @@ export default function EventsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)] md:min-h-screen">
         <Spinner />
       </div>
     );
@@ -51,7 +51,7 @@ export default function EventsPage() {
 
   if (!activeApp) {
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-6">
         <p className="text-muted-foreground">No active application</p>
       </div>
     );

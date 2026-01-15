@@ -8,7 +8,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className='dark'>
-        <main className="min-h-screen pb-14 md:pb-0 md:pl-16 flex flex-col bg-background">
+        <main className="min-h-screen pb-14 md:pb-0 md:pl-16 flex flex-col bg-background overflow-x-hidden">
           {children}
         </main>
         <Nav />

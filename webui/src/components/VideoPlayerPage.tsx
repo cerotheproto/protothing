@@ -96,67 +96,70 @@ export function VideoPlayerPage({ activeApp }: { activeApp: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)] md:min-h-screen">
         <Spinner />
       </div>
     );
   }
 
   if (!videoState) {
-    return <div className="p-4 text-center text-muted-foreground">No data available</div>;
+    return <div className="p-4 md:p-6 text-center text-muted-foreground">No data available</div>;
   }
 
   return (
-    <div className="space-y-6 p-4">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label>Current Video</Label>
-          <div className="text-sm text-muted-foreground">
-            {videoState.current_video || "No video selected"}
+    <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
+      <h1 className="text-3xl font-bold mb-8">Video Player</h1>
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Current Video</Label>
+            <div className="text-sm text-muted-foreground">
+              {videoState.current_video || "No video selected"}
+            </div>
           </div>
+
+          {videoState.current_video && (
+            <div className="flex gap-2">
+              {videoState.is_playing ? (
+                <Button onClick={handlePause} disabled={isSubmitting} size="sm">
+                  <Pause className="mr-2 h-4 w-4" />
+                  Pause
+                </Button>
+              ) : (
+                <Button onClick={handleResume} disabled={isSubmitting} size="sm">
+                  <Play className="mr-2 h-4 w-4" />
+                  Resume
+                </Button>
+              )}
+              <Button onClick={handleRestart} disabled={isSubmitting} variant="outline" size="sm">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Restart
+              </Button>
+            </div>
+          )}
         </div>
 
-        {videoState.current_video && (
-          <div className="flex gap-2">
-            {videoState.is_playing ? (
-              <Button onClick={handlePause} disabled={isSubmitting} size="sm">
-                <Pause className="mr-2 h-4 w-4" />
-                Pause
-              </Button>
-            ) : (
-              <Button onClick={handleResume} disabled={isSubmitting} size="sm">
-                <Play className="mr-2 h-4 w-4" />
-                Resume
-              </Button>
-            )}
-            <Button onClick={handleRestart} disabled={isSubmitting} variant="outline" size="sm">
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Restart
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Available Videos</Label>
-        {videoState.available_videos.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No videos found in assets/videos</div>
-        ) : (
-          <div className="grid gap-2">
-            {videoState.available_videos.map((video) => (
-              <Button
-                key={video}
-                variant={videoState.current_video === video ? "default" : "outline"}
-                onClick={() => handlePlayVideo(video)}
-                disabled={isSubmitting}
-                className="justify-start"
-              >
-                <Play className="mr-2 h-4 w-4" />
-                {video}
-              </Button>
-            ))}
-          </div>
-        )}
+        <div className="space-y-2">
+          <Label>Available Videos</Label>
+          {videoState.available_videos.length === 0 ? (
+            <div className="text-sm text-muted-foreground">No videos found in assets/videos</div>
+          ) : (
+            <div className="grid gap-2">
+              {videoState.available_videos.map((video) => (
+                <Button
+                  key={video}
+                  variant={videoState.current_video === video ? "default" : "outline"}
+                  onClick={() => handlePlayVideo(video)}
+                  disabled={isSubmitting}
+                  className="justify-start"
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  {video}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

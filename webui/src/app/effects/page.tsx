@@ -235,14 +235,14 @@ export default function EffectsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)] md:min-h-screen">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto min-w-md">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Effects</h1>
 

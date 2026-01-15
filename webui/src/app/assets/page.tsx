@@ -181,7 +181,7 @@ export default function AssetsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex min-h-[calc(100vh-3.5rem)] md:min-h-screen items-center justify-center">
         <Spinner className="size-8" />
       </div>
     );
@@ -189,7 +189,7 @@ export default function AssetsPage() {
 
   return (
     <div 
-      className="p-6 max-w-7xl mx-auto"
+      className="p-4 md:p-6 max-w-7xl mx-auto w-full"
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
       onDragOver={handleDrag}

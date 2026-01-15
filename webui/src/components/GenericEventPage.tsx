@@ -171,7 +171,7 @@ export function GenericEventPage({ activeApp, events, queries }: GenericEventPag
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
       <h1 className="text-3xl font-bold mb-2">Events and Queries</h1>
       <p className="text-muted-foreground mb-8">Application: {activeApp}</p>
 
@@ -185,7 +185,7 @@ export function GenericEventPage({ activeApp, events, queries }: GenericEventPag
           {events.length === 0 ? (
             <p className="text-muted-foreground">No available events</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {events.map((event) => (
                 <EventCard
                   key={event.name}
@@ -203,7 +203,7 @@ export function GenericEventPage({ activeApp, events, queries }: GenericEventPag
           {queries.length === 0 ? (
             <p className="text-muted-foreground">No available queries</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {queries.map((query) => (
                 <EventCard
                   key={query.name}

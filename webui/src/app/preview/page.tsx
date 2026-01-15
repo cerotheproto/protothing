@@ -120,8 +120,8 @@ export default function PreviewPage() {
     }, []);
 
     return (
-        <div className="flex flex-col gap-8 p-6 max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row gap-10">
+        <div className="flex flex-col gap-4 md:gap-8 p-4 md:p-6 max-w-7xl mx-auto w-full">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-10 items-center justify-center">
                 <canvas
                     ref={(el) => { canvasL = el; }}
                     width={width / 2}

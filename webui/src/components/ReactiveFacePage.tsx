@@ -157,7 +157,7 @@ export function ReactiveFacePage({ activeApp }: { activeApp: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)] md:min-h-screen">
         <Spinner />
       </div>
     );
@@ -165,7 +165,7 @@ export function ReactiveFacePage({ activeApp }: { activeApp: string }) {
 
   if (!faceState) {
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-6">
         <p className="text-muted-foreground">Failed to load state</p>
       </div>
     );
@@ -174,7 +174,7 @@ export function ReactiveFacePage({ activeApp }: { activeApp: string }) {
   const partTypes = Object.keys(faceState.available_parts || {});
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">Reactive Face</h1>
