@@ -25,8 +25,8 @@ class BaseApp:
         "Update the state, events come through events parameter"
         pass
 
-    # возвращает Frame или FrameDescription
-    def render(self) -> Optional[FrameDescription | Frame]:
+    # возвращает Frame или FrameDescription или два кадра для двух матриц
+    def render(self) -> Optional[FrameDescription | Frame | tuple[FrameDescription, FrameDescription]]:
         "Renders the current frame or frame description"
         return None
 

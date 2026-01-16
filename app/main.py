@@ -25,6 +25,7 @@ import logging
 import os
 import random
 import subprocess
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,37 @@ async def main_loop_task():
                 frame = renderer.render_frame(frame_desc, delta) # если описание, то рендерим с dt
             elif isinstance(frame_desc, Frame):
                 frame = frame_desc  # если уже кадр, то просто берем его
+            elif isinstance(frame_desc, tuple) and len(frame_desc) == 2:
+                # tuple of two different frames for left and right 64x32 displays
+                left_frame_desc, right_frame_desc = frame_desc
+                
+                left_frame = None
+                right_frame = None
+                
+                # render left frame
+                if isinstance(left_frame_desc, FrameDescription):
+                    left_frame_desc.effects.extend(effect_manager.get_effects())
+                    effect_manager.update_layers_cache(left_frame_desc.layers)
+                    rainbow_effect = find_rainbow_effect(left_frame_desc.effects)
+                    left_frame = renderer.render_frame(left_frame_desc, delta)
+                elif isinstance(left_frame_desc, Frame):
+                    left_frame = left_frame_desc
+                
+                # render right frame
+                if isinstance(right_frame_desc, FrameDescription):
+                    right_frame_desc.effects.extend(effect_manager.get_effects())
+                    effect_manager.update_layers_cache(right_frame_desc.layers)
+                    right_frame = renderer.render_frame(right_frame_desc, delta)
+                elif isinstance(right_frame_desc, Frame):
+                    right_frame = right_frame_desc
+                
+                # combine both 64x32 frames into single 128x32 frame
+                if left_frame is not None and right_frame is not None:
+                    frame = Frame(128, 32)
+                    frame.pixels = np.concatenate([left_frame.pixels, right_frame.pixels], axis=1)
+                else:
+                    await asyncio.sleep(0.01)
+                    continue
             else:
                 await asyncio.sleep(0.01)
                 continue  # пропускаем итерацию, если нет кадра
