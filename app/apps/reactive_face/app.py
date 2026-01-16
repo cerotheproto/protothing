@@ -160,10 +160,18 @@ class ReactiveFaceApp(BaseApp):
     ):
         """Запускает переход для одной части лица"""
         from_state = None
+        from_state_left = None
+        from_state_right = None
+        
         if old_ref and old_state:
             try:
                 old_part = self.face_parts_cache.get_part(part_type, old_ref)
                 from_state = old_part.get_state(old_state)
+                
+                # Check if old part was dual display
+                if from_state.dual_display:
+                    from_state_left = from_state
+                    from_state_right = from_state
             except Exception:
                 pass
         
@@ -171,11 +179,46 @@ class ReactiveFaceApp(BaseApp):
             new_part = self.face_parts_cache.get_part(part_type, new_ref)
             to_state = new_part.get_state(new_state)
             
-            self.transition_manager.start_transition(
-                part_type=part_type,
-                from_state=from_state,
-                to_state=to_state
-            )
+            # Check if new part is dual display
+            if to_state.dual_display:
+                # Create shared progress for synchronized transitions
+                from utils.transition import AnimatedParameter, InterpolationMethod
+                
+                # Determine frames based on first transition
+                temp_transition = self.transition_manager.active_transitions.get(f"{part_type}_left")
+                if temp_transition and not temp_transition.is_complete:
+                    frames = self.transition_manager.crossfade_duration
+                else:
+                    frames = self.transition_manager.morph_duration
+                
+                shared_progress = AnimatedParameter(
+                    frames=frames,
+                    method=InterpolationMethod.COSINE
+                )
+                shared_progress.set_target(1.0)
+                
+                # Create separate transitions for left and right displays with shared progress
+                self.transition_manager.start_transition(
+                    part_type=f"{part_type}_left",
+                    from_state=from_state_left or from_state,
+                    to_state=to_state,
+                    use_left_layer=True,
+                    shared_progress=shared_progress
+                )
+                self.transition_manager.start_transition(
+                    part_type=f"{part_type}_right",
+                    from_state=from_state_right or from_state,
+                    to_state=to_state,
+                    use_right_layer=True,
+                    shared_progress=shared_progress
+                )
+            else:
+                # Single display transition
+                self.transition_manager.start_transition(
+                    part_type=part_type,
+                    from_state=from_state,
+                    to_state=to_state
+                )
         except Exception as e:
             logger.error(f"Error starting transition for {part_type}: {e}")
 
@@ -314,21 +357,25 @@ class ReactiveFaceApp(BaseApp):
                 state_name = self.current_states.get(part_type, face_part.default_state)
                 part_state = face_part.get_state(state_name)
                 
-                # Check transition
-                transition = self.transition_manager.get_transition(part_type)
-                
                 if part_state.dual_display:
-                    # Use separate layers for left and right
-                    if transition and not transition.is_complete:
-                        blended_left = self.transition_manager.blend_layer(transition, part_state.layer_left)
-                        blended_right = self.transition_manager.blend_layer(transition, part_state.layer_right)
+                    # Use separate transitions for left and right
+                    transition_left = self.transition_manager.get_transition(f"{part_type}_left")
+                    transition_right = self.transition_manager.get_transition(f"{part_type}_right")
+                    
+                    if transition_left and not transition_left.is_complete:
+                        blended_left = self.transition_manager.blend_layer(transition_left, part_state.layer_left)
                         layers_left.append(blended_left)
-                        layers_right.append(blended_right)
                     else:
                         layers_left.append(part_state.layer_left)
+                    
+                    if transition_right and not transition_right.is_complete:
+                        blended_right = self.transition_manager.blend_layer(transition_right, part_state.layer_right)
+                        layers_right.append(blended_right)
+                    else:
                         layers_right.append(part_state.layer_right)
                 else:
                     # Use same layer for both displays
+                    transition = self.transition_manager.get_transition(part_type)
                     if transition and not transition.is_complete:
                         blended_layer = self.transition_manager.blend_layer(transition, part_state.layer)
                         layers_left.append(blended_layer)

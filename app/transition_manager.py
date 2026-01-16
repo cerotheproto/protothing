@@ -31,6 +31,8 @@ class PartTransition:
     similarity: float = 0.0
     force_crossfade: bool = False
     use_jump_transition: bool = False  # использовать прыжок для полного перехода
+    use_left_layer: bool = False  # use layer_left from to_state
+    use_right_layer: bool = False  # use layer_right from to_state
     _from_pixels: np.ndarray | None = field(default=None, repr=False)
     _to_pixels: np.ndarray | None = field(default=None, repr=False)
     _blended_pixels: np.ndarray | None = field(default=None, repr=False)
@@ -61,8 +63,23 @@ class PartTransition:
                 return (id(layer), layer.current_frame)
             return (id(layer), -1)
 
-        from_id = get_layer_id(self.from_state.layer) if self.from_state else None
-        to_id = get_layer_id(self.to_state.layer)
+        from_id = None
+        if self.from_state:
+            from_layer = self.from_state.layer
+            if self.from_state.dual_display:
+                if self.use_left_layer:
+                    from_layer = self.from_state.layer_left
+                elif self.use_right_layer:
+                    from_layer = self.from_state.layer_right
+            from_id = get_layer_id(from_layer)
+        
+        to_layer = self.to_state.layer
+        if self.to_state.dual_display:
+            if self.use_left_layer:
+                to_layer = self.to_state.layer_left
+            elif self.use_right_layer:
+                to_layer = self.to_state.layer_right
+        to_id = get_layer_id(to_layer)
         
         self._cache_key = (
             self.part_type,
@@ -70,23 +87,41 @@ class PartTransition:
             to_id,
             self.use_morph,
             self.use_jump_transition,
-            self.force_crossfade
+            self.force_crossfade,
+            self.use_left_layer,
+            self.use_right_layer
         )
     
     def _cache_pixels(self):
         """Кеширует пиксели состояний и координаты для быстрого смешивания"""
         # кешируем координаты
         if self.from_state is not None:
-            self._from_pixels = self._extract_pixels(self.from_state.layer)
-            self._from_x = self._get_coordinate(self.from_state.layer, 'x')
-            self._from_y = self._get_coordinate(self.from_state.layer, 'y')
+            from_layer = self.from_state.layer
+            # If transitioning from dual display, use appropriate layer
+            if self.from_state.dual_display:
+                if self.use_left_layer:
+                    from_layer = self.from_state.layer_left
+                elif self.use_right_layer:
+                    from_layer = self.from_state.layer_right
+            
+            self._from_pixels = self._extract_pixels(from_layer)
+            self._from_x = self._get_coordinate(from_layer, 'x')
+            self._from_y = self._get_coordinate(from_layer, 'y')
         else:
             self._from_x = 0.0
             self._from_y = 0.0
         
-        self._to_pixels = self._extract_pixels(self.to_state.layer)
-        self._to_x = self._get_coordinate(self.to_state.layer, 'x')
-        self._to_y = self._get_coordinate(self.to_state.layer, 'y')
+        # Select appropriate target layer
+        to_layer = self.to_state.layer
+        if self.to_state.dual_display:
+            if self.use_left_layer:
+                to_layer = self.to_state.layer_left
+            elif self.use_right_layer:
+                to_layer = self.to_state.layer_right
+        
+        self._to_pixels = self._extract_pixels(to_layer)
+        self._to_x = self._get_coordinate(to_layer, 'x')
+        self._to_y = self._get_coordinate(to_layer, 'y')
         
         # вычисляем схожесть если есть оба состояния
         if self._from_pixels is not None and self._to_pixels is not None:
@@ -166,28 +201,38 @@ class TransitionManager:
         from_state: "PartState | None",
         to_state: "PartState",
         duration_frames: int | None = None,
-        method: InterpolationMethod | None = None
+        method: InterpolationMethod | None = None,
+        use_left_layer: bool = False,
+        use_right_layer: bool = False,
+        shared_progress: AnimatedParameter | None = None
     ):
         """Запускает переход для части лица"""
         transition = PartTransition(
             part_type=part_type,
             from_state=from_state,
             to_state=to_state,
+            use_left_layer=use_left_layer,
+            use_right_layer=use_right_layer
         )
         
-        if duration_frames is not None:
-            frames = duration_frames
-        elif transition.use_jump_transition:
-            frames = self.jump_duration
-        elif transition.use_morph:
-            frames = self.morph_duration
+        if shared_progress is not None:
+            # Use shared progress for synchronized transitions
+            transition.progress = shared_progress
         else:
-            frames = self.crossfade_duration
-        
-        interp_method = method or self.method
-        progress = AnimatedParameter(frames=frames, method=interp_method)
-        progress.set_target(1.0)
-        transition.progress = progress
+            # Create new progress
+            if duration_frames is not None:
+                frames = duration_frames
+            elif transition.use_jump_transition:
+                frames = self.jump_duration
+            elif transition.use_morph:
+                frames = self.morph_duration
+            else:
+                frames = self.crossfade_duration
+            
+            interp_method = method or self.method
+            progress = AnimatedParameter(frames=frames, method=interp_method)
+            progress.set_target(1.0)
+            transition.progress = progress
         
         logger.debug(f"Transition {part_type}: similarity={transition.similarity:.3f}, use_morph={transition.use_morph}")
         
