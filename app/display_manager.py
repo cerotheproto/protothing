@@ -24,10 +24,33 @@ class DisplayManager:
     
     def process_frame(self, frame: Frame) -> Frame:
         """
-        Обрабатывает кадр: расширяет 64x32 до 128x32 и применяет отражение
+        Обрабатывает кадр: расширяет 64x32 до 128x32 и применяет отражение.
+        Также применяет режим зеркалирования к уже готовым 128x32 кадрам.
         """
+        # Expand and mirror 64x32 frames as before
         if frame.width == 64 and frame.height == 32:
             return self._expand_and_mirror(frame)
+        
+        # If frame is already 128x32, apply mirror mode to halves
+        if frame.width == 128 and frame.height == 32:
+            if self.mirror_mode == MirrorMode.NONE:
+                return frame
+
+            left = frame.pixels[:, :64]
+            right = frame.pixels[:, 64:]
+            result = Frame(width=128, height=32)
+
+            if self.mirror_mode == MirrorMode.LEFT:
+                left_mirrored = np.fliplr(left)
+                result.pixels[:, :64] = left_mirrored
+                result.pixels[:, 64:] = right
+            elif self.mirror_mode == MirrorMode.RIGHT:
+                right_mirrored = np.fliplr(right)
+                result.pixels[:, :64] = left
+                result.pixels[:, 64:] = right_mirrored
+
+            return result
+
         return frame
     
     def _expand_and_mirror(self, frame: Frame) -> Frame:

@@ -14,6 +14,9 @@ class PartState:
     """Состояние отдельной части лица"""
     name: str
     layer: StateType
+    dual_display: bool = False  # если True, то есть layer_left и layer_right
+    layer_left: StateType | None = None
+    layer_right: StateType | None = None
     
 
 @dataclass
@@ -85,22 +88,50 @@ def load_face_part(
     states = {}
     default_state = None
     
-    for state_name, state_info in states_data.items():
-        state_type = state_info.get("type", "sprite")
-        asset_file = state_info.get("asset", "")
+    def detect_type(filename: str) -> str:
+        """Auto-detect sprite type by file extension"""
+        ext = os.path.splitext(filename)[1].lower()
+        if ext in ['.gif']:
+            return "animated_sprite"
+        return "sprite"
+    
+    def load_layer(asset_file: str, pos_x: int, pos_y: int):
+        """Load a single layer from asset file"""
         asset_path = os.path.join(part_dir, asset_file)
-        
         if not os.path.exists(asset_path):
             raise FileNotFoundError(f"Asset not found: {asset_path}")
         
-        if state_type == "sprite":
-            layer = load_sprite(asset_path, x=position_x, y=position_y)
-        elif state_type == "animated_sprite":
-            layer = load_animated_sprite(asset_path, x=position_x, y=position_y)
+        layer_type = detect_type(asset_file)
+        if layer_type == "sprite":
+            return load_sprite(asset_path, x=pos_x, y=pos_y)
         else:
-            raise ValueError(f"Unknown layer type: {state_type}")
+            return load_animated_sprite(asset_path, x=pos_x, y=pos_y)
+    
+    for state_name, state_info in states_data.items():
+        # Check if dual display mode (asset_left and asset_right)
+        asset_left = state_info.get("asset_left")
+        asset_right = state_info.get("asset_right")
         
-        states[state_name] = PartState(name=state_name, layer=layer)
+        if asset_left and asset_right:
+            # Dual display mode
+            layer_left = load_layer(asset_left, position_x, position_y)
+            layer_right = load_layer(asset_right, position_x, position_y)
+            states[state_name] = PartState(
+                name=state_name,
+                layer=layer_left,  # fallback
+                dual_display=True,
+                layer_left=layer_left,
+                layer_right=layer_right
+            )
+        else:
+            # Single display mode (regular)
+            asset_file = state_info.get("asset", "")
+            layer = load_layer(asset_file, position_x, position_y)
+            states[state_name] = PartState(
+                name=state_name,
+                layer=layer,
+                dual_display=False
+            )
         
         if default_state is None:
             default_state = state_name

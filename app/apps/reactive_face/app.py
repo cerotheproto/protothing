@@ -58,10 +58,25 @@ class ReactiveFaceApp(BaseApp):
         self.boop_prev_eye_ref = None
     
     def start(self):
-        # reactive_face is only app that needs display mirroring
         from dependencies import display_manager
-
-        display_manager.set_mirror_mode(MirrorMode.RIGHT)
+        
+        # Check if any parts use dual display
+        self._ensure_initialized()
+        uses_dual_display = False
+        if self.current_preset:
+            for part_type, (ref, _) in self.current_preset.parts.items():
+                face_part = self.face_parts_cache.get_part(part_type, ref)
+                for state_name, part_state in face_part.states.items():
+                    if part_state.dual_display:
+                        uses_dual_display = True
+                        break
+                if uses_dual_display:
+                    break
+        
+        # Only set mirror mode if not using dual display
+        if not uses_dual_display:
+            display_manager.set_mirror_mode(MirrorMode.RIGHT)
+        
         super().start()
 
     def stop(self):
@@ -269,10 +284,11 @@ class ReactiveFaceApp(BaseApp):
         return handle_queries(self, query)
         
     
-    def render(self) -> FrameDescription:
+    def render(self) -> FrameDescription | tuple[FrameDescription, FrameDescription]:
         """Отрисовка лица на основе текущего пресета и состояний"""
         self._ensure_initialized()
         layers = []
+        has_dual_display = False
         
         if self.current_preset:
             for part_type, (ref, _) in self.current_preset.parts.items():
@@ -283,15 +299,61 @@ class ReactiveFaceApp(BaseApp):
                 state_name = self.current_states.get(part_type, face_part.default_state)
                 part_state = face_part.get_state(state_name)
                 
-                # проверяем есть ли активный переход для этой части
+                # Check if any part uses dual display
+                if part_state.dual_display:
+                    has_dual_display = True
+                    break
+        
+        # If dual display detected, render separately for left and right
+        if has_dual_display:
+            layers_left = []
+            layers_right = []
+            
+            for part_type, (ref, _) in self.current_preset.parts.items():
+                face_part = self.face_parts_cache.get_part(part_type, ref)
+                state_name = self.current_states.get(part_type, face_part.default_state)
+                part_state = face_part.get_state(state_name)
+                
+                # Check transition
                 transition = self.transition_manager.get_transition(part_type)
-                if transition and not transition.is_complete:
-                    # используем смешанный слой из перехода
-                    blended_layer = self.transition_manager.blend_layer(transition, part_state.layer)
-                    layers.append(blended_layer)
+                
+                if part_state.dual_display:
+                    # Use separate layers for left and right
+                    if transition and not transition.is_complete:
+                        blended_left = self.transition_manager.blend_layer(transition, part_state.layer_left)
+                        blended_right = self.transition_manager.blend_layer(transition, part_state.layer_right)
+                        layers_left.append(blended_left)
+                        layers_right.append(blended_right)
+                    else:
+                        layers_left.append(part_state.layer_left)
+                        layers_right.append(part_state.layer_right)
                 else:
-                    # обычный слой
-                    layers.append(part_state.layer)
+                    # Use same layer for both displays
+                    if transition and not transition.is_complete:
+                        blended_layer = self.transition_manager.blend_layer(transition, part_state.layer)
+                        layers_left.append(blended_layer)
+                        layers_right.append(blended_layer)
+                    else:
+                        layers_left.append(part_state.layer)
+                        layers_right.append(part_state.layer)
+            
+            return (
+                FrameDescription(layers=layers_left),
+                FrameDescription(layers=layers_right)
+            )
+        
+        # Regular single display rendering
+        for part_type, (ref, _) in self.current_preset.parts.items():
+            face_part = self.face_parts_cache.get_part(part_type, ref)
+            state_name = self.current_states.get(part_type, face_part.default_state)
+            part_state = face_part.get_state(state_name)
+            
+            transition = self.transition_manager.get_transition(part_type)
+            if transition and not transition.is_complete:
+                blended_layer = self.transition_manager.blend_layer(transition, part_state.layer)
+                layers.append(blended_layer)
+            else:
+                layers.append(part_state.layer)
         
         frame_desc = FrameDescription(layers=layers)
         return frame_desc

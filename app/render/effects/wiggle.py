@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from numpy.random import default_rng
 from render.frame_description import WiggleEffect, SpriteLayer, AnimatedSpriteLayer
@@ -30,23 +31,39 @@ def wiggle_effect(layers: list, effect: WiggleEffect, dt: float) -> None:
     if not sprite_layers or effect.amplitude <= 0.0:
         return
 
-    rng = _ensure_rng(effect)
-    _cleanup_states(effect, sprite_layers)
+    # Управление временем и состоянием симуляции
+    # Используем time.monotonic() для определения, является ли вызов повторным в рамках одного кадра
+    now = time.monotonic()
+    last_exec = getattr(effect, "_last_exec_time", 0.0)
+    # Если прошло очень мало времени (менее 2мс), считаем что это тот же кадр (например, второй дисплей)
+    is_same_frame = (now - last_exec) < 0.002
     
-    # Сохраняем dt для использования в _apply_to_layer
-    effect._last_dt = dt
+    if not is_same_frame:
+        # Новый кадр: продвигаем внутреннее время и обновляем RNG
+        effect._last_exec_time = now
+        effect._internal_time = getattr(effect, "_internal_time", 0.0) + dt
+        effect._last_dt = dt
+        
+        rng = _ensure_rng(effect)
+        
+        # Обновляем глобальное направление дрейфа
+        direction = _update_direction(effect, dt, rng)
+        if direction is None:
+            direction = np.array([1.0, 0.0], dtype=np.float32)
 
-    # 1. Обновляем глобальное направление дрейфа
-    direction = _update_direction(effect, dt, rng)
-    if direction is None:
-        direction = np.array([1.0, 0.0], dtype=np.float32)
+        # Обновляем глобальное смещение с мягким колебанием
+        _update_global_offset(effect, direction, dt, rng)
+        
+        # Очищаем старые состояния (с таймаутом, чтобы не удалять слои второго дисплея)
+        _cleanup_stale_states(effect)
 
-    # 2. Обновляем глобальное смещение с мягким колебанием
-    _update_global_offset(effect, direction, dt, rng)
-
-    # 3. Применяем смещение ко всем слоям
+    # Применяем смещение ко всем слоям
+    # Передаем internal_time, чтобы слой обновлялся только один раз за логический тик
+    current_internal_time = getattr(effect, "_internal_time", 0.0)
+    step_dt = getattr(effect, "_last_dt", dt)
+    
     for layer in sprite_layers:
-        _apply_to_layer(layer, effect)
+        _apply_to_layer(layer, effect, current_internal_time, step_dt)
 
 
 def _ensure_rng(effect: WiggleEffect):
@@ -55,11 +72,20 @@ def _ensure_rng(effect: WiggleEffect):
     return effect._rng_state
 
 
-def _cleanup_states(effect: WiggleEffect, sprite_layers: list) -> None:
-    active_ids = {id(layer) for layer in sprite_layers}
-    for layer_id in list(effect._sprite_states.keys()):
-        if layer_id not in active_ids:
-            effect._sprite_states.pop(layer_id, None)
+def _cleanup_stale_states(effect: WiggleEffect) -> None:
+    """Удаляем состояния, которые не обновлялись более 1 секунды"""
+    current_time = getattr(effect, "_internal_time", 0.0)
+    timeout = 1.0  # секунды
+    
+    # Собираем ID для удаления
+    to_remove = []
+    for layer_id, state in effect._sprite_states.items():
+        last_seen = state.get("last_seen", current_time) # Если нет last_seen, считаем новым
+        if current_time - last_seen > timeout:
+            to_remove.append(layer_id)
+            
+    for layer_id in to_remove:
+        effect._sprite_states.pop(layer_id, None)
 
 
 def _update_direction(effect: WiggleEffect, dt: float, rng) -> np.ndarray | None:
@@ -164,7 +190,7 @@ def _update_wander(effect: WiggleEffect, dt: float, rng) -> None:
         effect._wander_center = effect._wander_center / norm * limit
 
 
-def _apply_to_layer(layer: SpriteLayer | AnimatedSpriteLayer, effect: WiggleEffect) -> None:
+def _apply_to_layer(layer: SpriteLayer | AnimatedSpriteLayer, effect: WiggleEffect, current_time: float, dt: float) -> None:
     layer_id = id(layer)
     state = effect._sprite_states.get(layer_id)
     
@@ -180,12 +206,16 @@ def _apply_to_layer(layer: SpriteLayer | AnimatedSpriteLayer, effect: WiggleEffe
             "local_target": _random_unit_vector(rng) * rng.uniform(0.12, 0.35) * local_scale,
             "local_duration": rng.uniform(1.8, 3.2),
             "local_elapsed": 0.0,
-            "initialized": False
+            "initialized": False,
+            "last_seen": current_time,
+            "last_update_time": -1.0
         }
         effect._sprite_states[layer_id] = state
 
+    # Обновляем метку времени (для cleanup)
+    state["last_seen"] = current_time
+
     # Синхронизация базы (если слой переместили извне)
-    # Пропускаем проверку в первом кадре после инициализации
     current_pos = np.array([layer.x, layer.y], dtype=np.float32)
     
     if state["initialized"]:
@@ -194,23 +224,28 @@ def _apply_to_layer(layer: SpriteLayer | AnimatedSpriteLayer, effect: WiggleEffe
             # Слой переместился не нами -> обновляем базу
             state["base"] = current_pos.copy()
     
-    # Обновляем локальное смещение для каждого спрайта
-    dt = getattr(effect, '_last_dt', 0.016)  # Примерно 60fps
-    state["local_elapsed"] += dt
-    duration = max(state["local_duration"], 1e-3)
-    progress = state["local_elapsed"] / duration
+    # Проверяем, нужно ли обновлять слой в этом кадре
+    should_update_local = (state.get("last_update_time", -1.0) != current_time)
     
-    if progress >= 1.0:
-        rng = _ensure_rng(effect)
-        local_scale = max(effect.amplitude, 1.0)
-        state["local_target"] = _random_unit_vector(rng) * rng.uniform(0.12, 0.35) * local_scale
-        state["local_duration"] = rng.uniform(1.8, 3.2)
-        state["local_elapsed"] = 0.0
-        progress = 0.0
-    
-    # Интерполируем локальное смещение
-    eased = _smoothstep(min(progress, 1.0))
-    state["local_offset"] = state["local_target"] * eased
+    if should_update_local:
+        state["last_update_time"] = current_time
+        
+        # Обновляем локальное смещение для каждого спрайта
+        state["local_elapsed"] += dt
+        duration = max(state["local_duration"], 1e-3)
+        progress = state["local_elapsed"] / duration
+        
+        if progress >= 1.0:
+            rng = _ensure_rng(effect)
+            local_scale = max(effect.amplitude, 1.0)
+            state["local_target"] = _random_unit_vector(rng) * rng.uniform(0.12, 0.35) * local_scale
+            state["local_duration"] = rng.uniform(1.8, 3.2)
+            state["local_elapsed"] = 0.0
+            progress = 0.0
+        
+        # Интерполируем локальное смещение
+        eased = _smoothstep(min(progress, 1.0))
+        state["local_offset"] = state["local_target"] * eased
     
     # Применяем глобальное + локальное смещение
     base_pos = state["base"]
