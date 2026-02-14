@@ -8,8 +8,8 @@ from transport.proto import Packet, TYPE_BUTTON
 
 logger = logging.getLogger(__name__)
 
-# Команды (для TYPE_CMD)
 CMD_BRIGHTNESS = 0x01
+MAX_CHUNK_SIZE = 1024
 
 
 class UDPTransport(TransportBase):    
@@ -54,6 +54,18 @@ class UDPTransport(TransportBase):
         self._button_callback = callback
         if self._protocol:
             self._protocol.button_callback = callback
+
+    async def _send_chunked(self, data: bytes) -> None:
+        if not self._transport:
+            return
+            
+        for i in range(0, len(data), MAX_CHUNK_SIZE):
+            chunk = data[i : i + MAX_CHUNK_SIZE]
+            try:
+                self._transport.sendto(chunk)
+                await asyncio.sleep(0)
+            except Exception as e:
+                logger.error(f"Error sending chunk: {e}")
     
     async def send_frame(self, frame_data: bytes) -> None:
         """Отправляет кадр 128x32 на устройство"""
@@ -61,7 +73,7 @@ class UDPTransport(TransportBase):
             logger.warning("UDP transport not initialized")
             return
         
-        packet = Packet.make_frame(
+        full_packet = Packet.make_frame(
             frame_id=self._seq,
             pixels=frame_data,
             seq=self._seq,
@@ -69,11 +81,29 @@ class UDPTransport(TransportBase):
         )
         self._seq = (self._seq + 1) & 0xFFFF
         
-        try:
-            data = packet.pack()
-            self._transport.sendto(data)
-        except Exception as e:
-            logger.error(f"Error sending frame: {e}")
+        full_payload = full_packet.payload
+        total_len = len(full_payload)
+        
+        offset = 0
+        while offset < total_len:
+            end = min(offset + MAX_CHUNK_SIZE, total_len)
+            chunk_payload = full_payload[offset:end]
+            
+            chunk_packet = Packet(
+                ptype=full_packet.ptype,
+                seq=full_packet.seq,
+                payload=chunk_payload,
+                offset=offset,
+                total_len=total_len
+            )
+            
+            try:
+                self._transport.sendto(chunk_packet.pack())
+                await asyncio.sleep(0.002) 
+            except Exception as e:
+                logger.error(f"Error sending frame chunk: {e}")
+                
+            offset = end
     
 
     async def send_led_strip_frame(self, pixels: bytes) -> None:
@@ -81,8 +111,8 @@ class UDPTransport(TransportBase):
         if not self._transport:
             logger.warning("UDP transport is not initialized")
             return
-        
-        packet = Packet.make_led_strip_frame(
+            
+        full_packet = Packet.make_led_strip_frame(
             frame_id=self._led_seq,
             pixels=pixels,
             seq=self._led_seq,
@@ -90,11 +120,29 @@ class UDPTransport(TransportBase):
         )
         self._led_seq = (self._led_seq + 1) & 0xFFFF
         
-        try:
-            data = packet.pack()
-            self._transport.sendto(data)
-        except Exception as e:
-            logger.error(f"Error sending LED frame: {e}")
+        full_payload = full_packet.payload
+        total_len = len(full_payload)
+        
+        offset = 0
+        while offset < total_len:
+            end = min(offset + MAX_CHUNK_SIZE, total_len)
+            chunk_payload = full_payload[offset:end]
+            
+            chunk_packet = Packet(
+                ptype=full_packet.ptype,
+                seq=full_packet.seq,
+                payload=chunk_payload,
+                offset=offset,
+                total_len=total_len
+            )
+            
+            try:
+                self._transport.sendto(chunk_packet.pack())
+                await asyncio.sleep(0.002)
+            except Exception as e:
+                logger.error(f"Error sending led chunk: {e}")
+                
+            offset = end
     
     async def is_connected(self) -> bool:
         """Checks connection (UDP has no connection state, returns True if initialized)"""

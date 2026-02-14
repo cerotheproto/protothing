@@ -27,10 +27,19 @@ const width = 128;
 const height = 32;
 const MIN_SCALE = 6;
 const MAX_SCALE = 10;
+let isProcessing = false;
+const messageQueue: ArrayBuffer[] = [];
 
 function renderFrame(frame: FramePayload) {
     // splits frame into left and right
-    const pixels = frame.pixels
+    const pixels = frame.pixels;
+    const expectedSize = width * height * 3;
+    
+    if (pixels.length !== expectedSize) {
+        console.warn(`Frame size mismatch: got ${pixels.length}, expected ${expectedSize}`);
+        return;
+    }
+    
     const leftPixels = new Uint8Array(width / 2 * height * 3);
     const rightPixels = new Uint8Array(width / 2 * height * 3);
     const FULL_W = width;
@@ -72,6 +81,30 @@ function drawToCanvas(canvas: HTMLCanvasElement | null, pixels: Uint8Array) {
     }
     ctx.putImageData(imageData, 0, 0);
 }
+
+async function processMessageQueue() {
+    if (isProcessing || messageQueue.length === 0) return;
+    
+    isProcessing = true;
+    
+    while (messageQueue.length > 0) {
+        const data = messageQueue.shift();
+        if (!data) break;
+        
+        try {
+            const message = await ProtocolParser.parsePacket(data);
+            if (message.payload && typeof message.payload === "object" && "frameId" in message.payload) {
+                const frame = message.payload as FramePayload;
+                renderFrame(frame);
+            }
+        } catch (e) {
+            console.error("Error parsing message:", e);
+        }
+    }
+    
+    isProcessing = false;
+}
+
 export default function PreviewPage() {
     const [scale, setScale] = useState(MAX_SCALE);
 
@@ -82,15 +115,9 @@ export default function PreviewPage() {
             ws.binaryType = "arraybuffer";
             
             ws.addEventListener("message", async (event) => {
-                try {
-                    const message = await ProtocolParser.parsePacket(event.data);
-                    if (message.payload && typeof message.payload === "object" && "frameId" in message.payload) {
-                        const frame = message.payload as FramePayload;
-                        renderFrame(frame);
-                    }
-                }
-                catch (e) {
-                    console.error("Error parsing message:", e);
+                messageQueue.push(event.data as ArrayBuffer);
+                if (!isProcessing) {
+                    processMessageQueue();
                 }
             });
         }

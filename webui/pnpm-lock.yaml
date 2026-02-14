@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@jsquash/qoi':
+        specifier: ^1.1.0
+        version: 1.1.0
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -249,6 +252,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@jsquash/qoi@1.1.0':
+    resolution: {integrity: sha512-GV+Gy3zSMSEsjXjeiVO6vTPp4bTSKXVe4CjbHQFEu60edt09gl0cqEuEU5Sp0V5tXvU91sB5MW8tKZyDLEdWlQ==}
 
   '@next/env@16.1.0':
     resolution: {integrity: sha512-Dd23XQeFHmhf3KBW76leYVkejHlCdB7erakC2At2apL1N08Bm+dLYNP+nNHh0tzUXfPQcNcXiQyacw0PG4Fcpw==}
@@ -1091,6 +1097,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@jsquash/qoi@1.1.0': {}
 
   '@next/env@16.1.0': {}
 
